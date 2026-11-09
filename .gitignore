@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env*
+!.env.example
+KayKit_Bits_Bundle2_1.0/
+.superpowers/
+test-results/

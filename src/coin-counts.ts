@@ -1,0 +1,5 @@
+export const LOOSE_COINS = 12000;
+export const SMALL_CRATE_COINS = 240;
+export const LARGE_CRATE_COINS = 540;
+export const TOTAL_COINS =
+  LOOSE_COINS + 12 * SMALL_CRATE_COINS + 8 * LARGE_CRATE_COINS;

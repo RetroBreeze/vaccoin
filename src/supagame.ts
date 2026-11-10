@@ -1,4 +1,4 @@
-import type { GameServices } from "@supagame/sdk-ts";
+import { GameServicesError, type GameServices } from "@supagame/sdk-ts";
 import { TOTAL_COINS } from "./coin-counts";
 
 export interface CompletedRun {
@@ -21,6 +21,42 @@ interface Attempt {
   userId?: string;
   submitted: boolean;
   pending?: Promise<void>;
+  stage: string;
+}
+function submissionKey(): string {
+  const crypto = globalThis.crypto;
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  if (!crypto?.getRandomValues) return "";
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+function failure(error: unknown): string {
+  if (error instanceof GameServicesError) {
+    switch (error.kind) {
+      case "authentication":
+        return "AUTHENTICATION ERROR";
+      case "network":
+        return typeof navigator !== "undefined" && navigator.onLine === false
+          ? "OFFLINE"
+          : "NETWORK ERROR";
+      case "api":
+        return `API ERROR / ${"code" in error ? error.code : "UNKNOWN"}`;
+      case "unexpected_response":
+        return "INVALID API RESPONSE";
+      case "invalid_parameter":
+        return "INVALID REQUEST";
+    }
+  }
+  if (error instanceof Error && error.message === "Leaderboard timeout")
+    return "REQUEST TIMED OUT";
+  if (error instanceof Error && error.message === "Secure UUID unavailable")
+    return "SECURE RANDOMNESS UNAVAILABLE";
+  return "REQUEST FAILED";
 }
 const KEY = "vaccoin.personal-best.v1";
 function browserStorage(): StorageLike | undefined {
@@ -53,7 +89,9 @@ export class Leaderboard {
   personalBest: number | null = null;
   rank: number | null = null;
   entries: Standing[] = [];
-  status = "ONLINE UNAVAILABLE";
+  status = "BACKEND NOT CONFIGURED";
+  topStatus = "LEADERBOARD NOT LOADED";
+  retryLabel = "RETRY SESSION";
   name = "YOU";
   loading = false;
   canRetry = false;
@@ -111,18 +149,21 @@ export class Leaderboard {
     const revision = this.revision;
     this.loading = true;
     this.status = "CONNECTING LEADERBOARD";
+    let stage = "PLAYER SESSION";
     try {
       await deadline(this.ensurePlayer());
-      const ok = await deadline(this.refresh(revision));
+      stage = "RANKINGS";
+      const issue = await deadline(this.refresh(revision));
       if (revision === this.revision) {
-        this.status = ok
-          ? "GLOBAL / MOST COINS COLLECTED"
-          : "RANKINGS UNAVAILABLE";
-        this.canRetry = !ok;
+        this.status = issue ?? "GLOBAL / MOST COINS COLLECTED";
+        this.canRetry = issue !== null;
+        this.retryLabel = "RETRY RANKINGS";
       }
-    } catch {
+    } catch (error) {
       if (revision === this.revision) {
-        this.status = "ONLINE UNAVAILABLE / PLAY IS READY";
+        this.status = `${stage} UNAVAILABLE / ${failure(error)}`;
+        this.retryLabel =
+          stage === "PLAYER SESSION" ? "RETRY SESSION" : "RETRY RANKINGS";
         this.canRetry = true;
       }
     } finally {
@@ -142,14 +183,16 @@ export class Leaderboard {
     }
   }
 
-  private async refresh(revision: number): Promise<boolean> {
+  private async refresh(revision: number): Promise<string | null> {
     const version = ++this.refreshVersion;
     const [top, mine] = await Promise.allSettled([
       this.game!.leaderboards.getTop("vaccoin", { limit: 10 }),
       this.game!.leaderboards.getMine("vaccoin"),
     ]);
     if (revision !== this.revision || version !== this.refreshVersion)
-      return false;
+      return null;
+    this.topStatus =
+      top.status === "fulfilled" ? "NO SCORES YET" : "LEADERBOARD UNAVAILABLE";
     if (top.status === "fulfilled")
       this.entries = top.value.entries.slice(0, 10).map((e) => ({
         rank: e.rank,
@@ -164,7 +207,16 @@ export class Leaderboard {
       // Do not display a stale rank after an uncertain write.
       this.rank = null;
     }
-    return top.status === "fulfilled" && mine.status === "fulfilled";
+    // Both reads failed: report rankings as a whole with the first cause.
+    // Avoid repeating operation names beyond the narrow Canvas width.
+    if (top.status === "rejected" && mine.status === "rejected")
+      return `RANKINGS UNAVAILABLE / ${failure(top.reason)}`;
+    const issues: string[] = [];
+    if (top.status === "rejected")
+      issues.push(`LEADERBOARD UNAVAILABLE / ${failure(top.reason)}`);
+    if (mine.status === "rejected")
+      issues.push(`PERSONAL BEST UNAVAILABLE / ${failure(mine.reason)}`);
+    return issues.length ? issues.join(" / ") : null;
   }
 
   async complete(run: CompletedRun): Promise<{ submitted: boolean }> {
@@ -188,7 +240,8 @@ export class Leaderboard {
     if (!attempt) {
       attempt = {
         run: { ...run },
-        key: globalThis.crypto?.randomUUID?.() ?? "",
+        key: submissionKey(),
+        stage: "PLAYER SESSION",
         submitted: false,
       };
       this.attempts.set(run.id, attempt);
@@ -204,7 +257,7 @@ export class Leaderboard {
 
   private async send(attempt: Attempt): Promise<{ submitted: boolean }> {
     if (!this.game) {
-      this.status = "ONLINE UNAVAILABLE / SCORE SAVED LOCALLY";
+      this.status = "BACKEND NOT CONFIGURED / SCORE SAVED LOCALLY";
       return { submitted: false };
     }
     const revision = this.revision;
@@ -214,10 +267,12 @@ export class Leaderboard {
     if (!attempt.pending) {
       const operation = (async () => {
         if (!attempt.submitted) {
+          attempt.stage = "PLAYER SESSION";
           const userId = await this.ensurePlayer();
           if (attempt.userId && attempt.userId !== userId)
             throw new Error("Submission belongs to another identity");
           attempt.userId = userId;
+          attempt.stage = "SUBMISSION";
           if (!attempt.key) throw new Error("Secure UUID unavailable");
           const result = await this.game!.leaderboards.submit(
             "vaccoin",
@@ -230,24 +285,24 @@ export class Leaderboard {
             this.saveBest(result.bestScore);
           }
         }
+        attempt.stage = "RANKINGS";
         // Bound reads separately so an accepted write can retry hung rankings.
-        const ok = await deadline(this.refresh(revision));
+        const issue = await deadline(this.refresh(revision));
         if (revision === this.revision) {
-          this.status = ok
-            ? "SCORE SUBMITTED"
-            : "SCORE SUBMITTED / RANKINGS UNAVAILABLE";
-          this.canRetry = !ok;
+          this.status = issue
+            ? `SCORE SUBMITTED / ${issue}`
+            : "SCORE SUBMITTED";
+          this.canRetry = issue !== null;
+          this.retryLabel = "RETRY RANKINGS";
         }
       })();
       attempt.pending = operation;
       void operation
-        .catch(() => {
+        .catch((error) => {
           // Revalidate the same identity on a deliberate retry. Never sign out.
           this.readyName = undefined;
           if (revision === this.revision) {
-            this.status = attempt.submitted
-              ? "SCORE SUBMITTED / RANKINGS UNAVAILABLE"
-              : "ONLINE UNAVAILABLE / RETRY SCORE";
+            this.reportAttemptFailure(attempt, error);
             this.canRetry = true;
           }
         })
@@ -258,16 +313,21 @@ export class Leaderboard {
     }
     try {
       await deadline(attempt.pending);
-    } catch {
+    } catch (error) {
       if (revision === this.revision) {
         this.loading = false;
         this.canRetry = true;
-        this.status = attempt.submitted
-          ? "SCORE SUBMITTED / RANKINGS UNAVAILABLE"
-          : "ONLINE UNAVAILABLE / RETRY SCORE";
+        this.reportAttemptFailure(attempt, error);
       }
     }
     return { submitted: attempt.submitted };
+  }
+
+  private reportAttemptFailure(attempt: Attempt, error: unknown) {
+    this.status = attempt.submitted
+      ? `SCORE SUBMITTED / RANKINGS UNAVAILABLE / ${failure(error)}`
+      : `${attempt.stage} UNAVAILABLE / ${failure(error)}`;
+    this.retryLabel = attempt.submitted ? "RETRY RANKINGS" : "RETRY SCORE";
   }
 
   async retry() {

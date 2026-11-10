@@ -35,6 +35,8 @@ it("renders all ten standings, final score, personal best, rank and retry state"
     error: "",
     persisted: true,
     leaderboardStatus: "SCORE SUBMITTED / RANKINGS UNAVAILABLE",
+    leaderboardReadStatus: "NO SCORES YET",
+    retryLabel: "RETRY RANKINGS",
     loading: false,
     canRetry: true,
     entries: Array.from({ length: 10 }, (_, i) => ({
@@ -51,6 +53,20 @@ it("renders all ten standings, final score, personal best, rank and retry state"
   expect(texts).toContain("10. Player 10");
   expect(texts).toContain("991");
   expect(texts).toContain("SCORE SUBMITTED / RANKINGS UNAVAILABLE");
+  expect(texts).toContain("RETRY RANKINGS");
+  expect(texts).not.toContain("RETRY ONLINE");
   expect(retry.style).toHaveProperty("display", "block");
+  vi.mocked(pixelText).mockClear();
+  ui.draw(
+    {
+      ...state,
+      entries: [],
+      leaderboardStatus: "PERSONAL BEST UNAVAILABLE / INVALID API RESPONSE",
+    },
+    0.016,
+  );
+  const emptyTexts = vi.mocked(pixelText).mock.calls.map((c) => c[1]);
+  expect(emptyTexts).toContain("NO SCORES YET");
+  expect(emptyTexts).not.toContain("LEADERBOARD OFFLINE");
   vi.unstubAllGlobals();
 });

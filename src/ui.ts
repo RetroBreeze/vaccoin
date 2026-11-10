@@ -18,6 +18,8 @@ export interface UIState {
   personalBest: number | null;
   rank: number | null;
   leaderboardStatus: string;
+  leaderboardReadStatus: string;
+  retryLabel: string;
   loading: boolean;
   canRetry: boolean;
 }
@@ -179,11 +181,7 @@ export class UI {
         }
       } else {
         this.text(
-          s.loading
-            ? "LOADING LEADERBOARD"
-            : s.leaderboardStatus.includes("UNAVAILABLE")
-              ? "LEADERBOARD OFFLINE"
-              : "NO SCORES YET",
+          s.loading ? "LOADING LEADERBOARD" : s.leaderboardReadStatus,
           cx,
           290,
           2,
@@ -191,9 +189,11 @@ export class UI {
           "center",
         );
       }
+      this.retry.textContent = s.retryLabel;
+      this.retry.setAttribute("aria-label", s.retryLabel);
       if (s.canRetry && !s.loading) {
         this.rect(cx - 112, 446, 224, 28, C.dark);
-        this.text("RETRY ONLINE", cx, 455, 2, C.gold, "center");
+        this.text(s.retryLabel, cx, 455, 2, C.gold, "center");
         Object.assign(this.retry.style, {
           display: "block",
           left: `${((cx - 112) / w) * 100}%`,

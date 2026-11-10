@@ -1,7 +1,7 @@
 // Every browser check intercepts backend HTTP; no test score reaches hosted Supagame.
 export async function mockBackend(
   page,
-  { offline = false, savedName = false } = {},
+  { offline = false, savedName = false, appOrigin } = {},
 ) {
   const playerId = "11111111-1111-4111-8111-111111111111";
   let name = "Mara",
@@ -18,7 +18,9 @@ export async function mockBackend(
     const request = route.request();
     const url = new URL(request.url());
     if (
-      ["127.0.0.1", "localhost"].includes(url.hostname) &&
+      (appOrigin
+        ? url.origin === appOrigin
+        : ["127.0.0.1", "localhost"].includes(url.hostname)) &&
       !url.pathname.startsWith("/auth/v1/") &&
       !url.pathname.startsWith("/functions/v1/")
     )

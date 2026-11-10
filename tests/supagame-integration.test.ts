@@ -1,5 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
-import type { GameServices, LeaderboardEntry } from "@supagame/sdk-ts";
+import {
+  AuthenticationError,
+  ApiError,
+  NetworkError,
+  UnexpectedResponseError,
+  type GameServices,
+  type LeaderboardEntry,
+} from "@supagame/sdk-ts";
 import { Leaderboard } from "../src/supagame";
 
 const entry: LeaderboardEntry = {
@@ -133,7 +140,7 @@ it("retains accepted submission when standings fail and retries reads only", asy
   await board.connect("Mara");
   game.leaderboards.getMine.mockRejectedValueOnce(new Error("offline"));
   expect((await board.complete(run)).submitted).toBe(true);
-  expect(board.status).toContain("RANKINGS UNAVAILABLE");
+  expect(board.status).toContain("PERSONAL BEST UNAVAILABLE");
   await board.retry();
   expect(game.leaderboards.submit).toHaveBeenCalledTimes(1);
   expect(board.rank).toBe(12);
@@ -243,4 +250,143 @@ it("can retry rankings when an accepted submission is followed by a hanging read
   expect(board.status).toBe("SCORE SUBMITTED");
   expect(board.rank).toBe(12);
   expect(game.leaderboards.submit).toHaveBeenCalledTimes(1);
+});
+
+it("submits on insecure origins using secure random bytes and reuses the UUID on retry", async () => {
+  const getRandomValues = globalThis.crypto.getRandomValues.bind(
+    globalThis.crypto,
+  );
+  vi.stubGlobal("crypto", { getRandomValues });
+  try {
+    const { board, game } = fixture();
+    await board.connect("Mara");
+    game.leaderboards.submit.mockRejectedValueOnce(new NetworkError());
+    await board.complete(run);
+    await board.retry();
+    expect(game.leaderboards.submit).toHaveBeenCalledTimes(2);
+    const key = game.leaderboards.submit.mock.calls[0][2];
+    expect(key).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(game.leaderboards.submit.mock.calls[1][2]).toBe(key);
+    expect(board.status).toBe("SCORE SUBMITTED");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it.each([
+  [new AuthenticationError(), "AUTHENTICATION ERROR"],
+  [new ApiError(429, "RATE_LIMITED", "Slow down"), "API ERROR / RATE_LIMITED"],
+  [new UnexpectedResponseError(), "INVALID API RESPONSE"],
+  [new NetworkError(), "NETWORK ERROR"],
+])(
+  "reports a submission failure without calling a successful leaderboard offline: %s",
+  async (error, message) => {
+    const { board, game } = fixture();
+    await board.connect("Mara");
+    game.leaderboards.submit.mockRejectedValue(error);
+    await board.complete(run);
+    expect(board.status).toContain(message);
+    expect(board.status).not.toContain("OFFLINE");
+    expect(board.entries).toHaveLength(1);
+    expect(board.retryLabel).toBe("RETRY SCORE");
+  },
+);
+
+it("reports actual offline transport failures separately", async () => {
+  vi.stubGlobal("navigator", { onLine: false });
+  try {
+    const { board, game } = fixture();
+    await board.connect("Mara");
+    game.leaderboards.submit.mockRejectedValue(new NetworkError());
+    await board.complete(run);
+    expect(board.status).toContain("OFFLINE");
+    expect(board.best).toBe(800);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("identifies personal-best failures while retaining successful top-ten reads", async () => {
+  const { board, game } = fixture();
+  game.leaderboards.getMine.mockRejectedValue(new UnexpectedResponseError());
+  await board.connect("Mara");
+  expect(board.entries).toHaveLength(1);
+  expect(board.status).toContain(
+    "PERSONAL BEST UNAVAILABLE / INVALID API RESPONSE",
+  );
+  expect(board.status).not.toContain("OFFLINE");
+  expect(board.retryLabel).toBe("RETRY RANKINGS");
+});
+
+it("reports a missing secure generator as a local submission issue with standings still available", async () => {
+  vi.stubGlobal("crypto", undefined);
+  try {
+    const { board, game } = fixture();
+    await board.connect("Mara");
+    await board.complete(run);
+    expect(board.status).toContain("SECURE RANDOMNESS UNAVAILABLE");
+    expect(board.status).not.toContain("OFFLINE");
+    expect(board.entries).toHaveLength(1);
+    expect(game.leaderboards.submit).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("identifies session failures and recovers through deliberate session retry", async () => {
+  const { board, game } = fixture();
+  game.players.ensureAnonymousSession.mockRejectedValueOnce(
+    new AuthenticationError(),
+  );
+  await board.connect("Mara");
+  expect(board.status).toContain(
+    "PLAYER SESSION UNAVAILABLE / AUTHENTICATION ERROR",
+  );
+  expect(board.retryLabel).toBe("RETRY SESSION");
+  await board.retry();
+  expect(board.status).toContain("GLOBAL");
+  expect(board.canRetry).toBe(false);
+});
+
+it("keeps personal best when the public leaderboard API fails", async () => {
+  const { board, game } = fixture();
+  game.leaderboards.getTop.mockRejectedValueOnce(
+    new ApiError(503, "UNAVAILABLE", "Try later"),
+  );
+  await board.connect("Mara");
+  expect(board.personalBest).toBe(800);
+  expect(board.topStatus).toBe("LEADERBOARD UNAVAILABLE");
+  expect(board.status).toContain("API ERROR / UNAVAILABLE");
+  expect(board.status).not.toContain("OFFLINE");
+  await board.retry();
+  expect(board.entries).toHaveLength(1);
+  expect(board.canRetry).toBe(false);
+});
+
+it("keeps simultaneous read errors readable on the minimum results width", async () => {
+  const { textWidth } = await import("../src/pixel-font");
+  const { board, game } = fixture();
+  await board.connect("Mara");
+  game.leaderboards.getTop.mockRejectedValue(new NetworkError());
+  game.leaderboards.getMine.mockRejectedValue(new AuthenticationError());
+  await board.complete(run);
+  expect(board.status).toContain("SCORE SUBMITTED / RANKINGS UNAVAILABLE");
+  expect(board.status).toContain("NETWORK ERROR");
+  expect(textWidth(board.status, 1)).toBeLessThanOrEqual(500);
+  expect(textWidth(board.topStatus, 2)).toBeLessThanOrEqual(500);
+});
+
+it("fits a personal-best API error after submission on the minimum results width", async () => {
+  const { textWidth } = await import("../src/pixel-font");
+  const { board, game } = fixture();
+  await board.connect("Mara");
+  game.leaderboards.getMine.mockRejectedValue(
+    new ApiError(404, "LEADERBOARD_NOT_FOUND", "Missing board"),
+  );
+  await board.complete(run);
+  expect(board.status).toContain("SCORE SUBMITTED / PERSONAL BEST UNAVAILABLE");
+  expect(board.status).toContain("LEADERBOARD_NOT_FOUND");
+  expect(textWidth(board.status, 1)).toBeLessThanOrEqual(500);
 });

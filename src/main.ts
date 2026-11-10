@@ -31,8 +31,8 @@ async function boot() {
   const nameInput = document.querySelector<HTMLInputElement>("#display-name")!;
   const retryButton = button.cloneNode(false) as HTMLButtonElement;
   retryButton.id = "retry-leaderboard";
-  retryButton.textContent = "RETRY ONLINE";
-  retryButton.setAttribute("aria-label", "Retry leaderboard connection");
+  retryButton.textContent = "RETRY RANKINGS";
+  retryButton.setAttribute("aria-label", "Retry rankings");
   retryButton.style.display = "none";
   button.after(retryButton);
   const fullscreenButton =
@@ -140,6 +140,8 @@ async function boot() {
     personalBest: null,
     rank: null,
     leaderboardStatus: leaderboard.status,
+    leaderboardReadStatus: leaderboard.topStatus,
+    retryLabel: leaderboard.retryLabel,
     loading: false,
     canRetry: false,
   };
@@ -460,6 +462,8 @@ async function boot() {
     uiState.personalBest = leaderboard.personalBest;
     uiState.rank = leaderboard.rank;
     uiState.leaderboardStatus = leaderboard.status;
+    uiState.leaderboardReadStatus = leaderboard.topStatus;
+    uiState.retryLabel = leaderboard.retryLabel;
     uiState.loading = leaderboard.loading;
     uiState.canRetry = leaderboard.canRetry;
     view.draw();

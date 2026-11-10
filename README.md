@@ -83,3 +83,6 @@ Development-only QA helpers are enabled with `?qa`; they are removed from produc
 ## Assets
 
 KayKit Bits Bundle 2 by **Kay Lousberg** (CC0). Selected glTF files, original buffers and palette textures are copied into `public/assets/`; the full supplied source bundle remains untouched and is excluded from Git/build output. License: `public/assets/KayKit-LICENSE.txt`.
+
+Live Leaderboards now appears on the title screen through the Supagame SDK.
+See [setup, lifecycle, tests and hosted deployment](docs/live-leaderboards.md).

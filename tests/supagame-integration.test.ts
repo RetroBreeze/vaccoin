@@ -33,6 +33,7 @@ function fixture() {
       })),
     },
     leaderboards: {
+      subscribe: vi.fn(() => ({unsubscribe: vi.fn()})),
       submit: vi.fn(async (_board: string, score: number, _key?: string) => ({
         outcome: "best" as const,
         score,

@@ -2,6 +2,9 @@ import { pixelText } from "./pixel-font";
 import { Phase } from "./round";
 import { Standing } from "./supagame";
 export interface UIState {
+  liveEntries?: Standing[];
+  liveStatus?: string;
+  rankNotice?: string;
   leaderboardOpen?: boolean;
   browseMode?: "top" | "around";
   browseEntries?: Standing[];
@@ -257,6 +260,13 @@ export class UI {
             256,
             36,
           );
+        const live = s.liveEntries ?? [];
+        const index = live.length ? Math.floor(s.time / 3) % live.length : 0;
+        this.rect(cx - 210, 448, 420, 58, C.dark);
+        this.text("LIVE LEADERBOARD / " + (s.liveStatus ?? "LOADING"), cx, 456, 1, C.mint, "center");
+        const row = live[index];
+        this.text(row ? `${row.rank}. ${row.name.slice(0, 16)}  ${row.score}` : s.liveStatus === "CONNECTED" ? "NO SCORES YET" : "WAITING FOR RANKINGS", cx, 477, 2, row?.isPlayer ? C.gold : C.white, "center");
+
         if (s.controlHint)
           this.text(s.controlHint, cx, 418, 1, C.muted, "center");
       }
@@ -335,6 +345,10 @@ export class UI {
           C.muted,
           "center",
         );
+    }
+    if (s.rankNotice) {
+      this.rect(cx - 180, 510, 360, 23, C.dark);
+      this.text(s.rankNotice, cx, 517, 1, C.gold, "center");
     }
     if (s.phase !== "playing") {
       // A small speaker icon replaces the old sound-status lettering.

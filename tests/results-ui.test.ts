@@ -70,3 +70,18 @@ it("renders all ten standings, final score, personal best, rank and retry state"
   expect(emptyTexts).not.toContain("LEADERBOARD OFFLINE");
   vi.unstubAllGlobals();
 });
+
+it("rolls title entries without network activity and renders live states and notices", () => {
+  vi.stubGlobal("innerWidth", 844); vi.stubGlobal("innerHeight", 390);
+  const control = () => ({style:{},addEventListener:vi.fn(),setAttribute:vi.fn(),textContent:""});
+  const ctx={clearRect:vi.fn(),fillRect:vi.fn()};
+  const ui=new UI({getContext:()=>ctx} as unknown as HTMLCanvasElement,control() as unknown as HTMLButtonElement,control() as unknown as HTMLButtonElement,control() as unknown as HTMLButtonElement);
+  const state={phase:'title',time:0,liveStatus:'CONNECTED',liveEntries:[{rank:1,name:'FIRST',score:50},{rank:2,name:'SECOND',score:40,isPlayer:true}],rankNotice:'YOU ENTERED THE TOP 10!'} as UIState;
+  vi.mocked(pixelText).mockClear();ui.draw(state,0.016);
+  expect(vi.mocked(pixelText).mock.calls.some(c=>c[1].includes('FIRST'))).toBe(true);
+  state.time=3;vi.mocked(pixelText).mockClear();ui.draw(state,0.016);
+  expect(vi.mocked(pixelText).mock.calls.some(c=>c[1].includes('SECOND') && c[5]==='#ffcf58')).toBe(true);
+  expect(vi.mocked(pixelText).mock.calls.some(c=>c[1]===state.rankNotice)).toBe(true);
+  state.liveEntries=[];state.liveStatus='RECONNECTING';vi.mocked(pixelText).mockClear();ui.draw(state,0.016);
+  expect(vi.mocked(pixelText).mock.calls.some(c=>c[1].includes('RECONNECTING'))).toBe(true);
+});

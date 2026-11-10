@@ -8,6 +8,26 @@ export async function mockBackend(
     best = 0;
   const submissions = new Map();
   const calls = { signups: 0, profiles: 0, submissions: [], mine: 0, top: 0 };
+  const sockets = [];
+  calls.broadcast = () => {
+    for (const {socket, topic, array, join_ref} of sockets) {
+      const payload = {event:"changed",payload:{boardId:"vaccoin"},type:"broadcast"};
+      socket.send(JSON.stringify(array ? [join_ref,null,topic,"broadcast",payload] : {topic,event:"broadcast",payload,ref:null}));
+    }
+  };
+  calls.liveScore = 19000;
+  calls.mineRank = null;
+  calls.disconnect = () => { for (const {socket} of sockets.splice(0)) socket.close({code:1011,reason:"Test reconnect"}); };
+  // No browser test may open a hosted Realtime socket.
+  await page.routeWebSocket("**/realtime/v1/websocket*", socket => {
+    socket.onMessage(raw => {
+      const parsed = JSON.parse(String(raw));
+      const array = Array.isArray(parsed);
+      const message = array ? {join_ref:parsed[0],ref:parsed[1],topic:parsed[2],event:parsed[3],payload:parsed[4]} : parsed;
+      if (message.event === "phx_join") sockets.push({socket,topic:message.topic,array,join_ref:message.join_ref});
+      socket.send(JSON.stringify(array ? [message.join_ref,message.ref,message.topic,"phx_reply",{status:"ok",response:{}}] : {topic:message.topic,event:"phx_reply",payload:{status:"ok",response:{}},ref:message.ref}));
+    });
+  });
   if (savedName)
     await page.addInitScript(() => {
       try {
@@ -107,14 +127,14 @@ export async function mockBackend(
           playerId: `22222222-2222-4222-8222-${String(i + 1).padStart(12, "0")}`,
           displayName: `Player ${i + 1}`,
           rank: i + 1,
-          score: 19000 - i * 100,
+          score: calls.liveScore - i * 100,
         })),
         nextCursor: null,
       });
     }
     if (url.pathname.endsWith("/me")) {
       calls.mine++;
-      return json(submissions.size ? entry : null);
+      return json(calls.mineRank !== null ? {...entry, rank:calls.mineRank} : submissions.size ? entry : null);
     }
     // Block unexpected external traffic as well as unrecognised backend routes.
     return json({ code: "NOT_FOUND", message: "Unexpected test request" }, 404);

@@ -1,4 +1,4 @@
-import { GameServicesError, type GameServices } from "@supagame/sdk-ts";
+import { GameServicesError, type GameServices, type LiveSubscription } from "@supagame/sdk-ts";
 import { TOTAL_COINS } from "./coin-counts";
 
 export interface CompletedRun {
@@ -85,6 +85,37 @@ async function deadline<T>(promise: Promise<T>): Promise<T> {
 }
 
 export class Leaderboard {
+  liveStatus = "LOADING LIVE LEADERBOARD";
+  liveEntries: Standing[] = [];
+  rankNotice = "";
+  rankNoticeUntil = 0;
+  private live?: LiveSubscription;
+  async prepareLive() {
+    if (!this.game) { this.liveStatus = "BACKEND NOT CONFIGURED"; return; }
+    try {
+      const identity = await this.game.players.ensureAnonymousSession();
+      this.userId = identity.userId;
+      if (typeof document === "undefined" || !document.hidden) this.startLive();
+    } catch (error) { this.liveStatus = failure(error); }
+  }
+  startLive() {
+    if (!this.game || this.live || (typeof document !== "undefined" && document.hidden)) return;
+    try {
+      this.live = this.game.leaderboards.subscribe("vaccoin", {
+        topN: 10,
+        onUpdate: (page) => {
+          this.liveEntries = page.entries.map(e => ({ rank: e.rank, name: e.displayName || "ANONYMOUS", score: e.score, isPlayer: e.playerId === this.userId }));
+        },
+        onStatus: (status) => { this.liveStatus = status.toUpperCase(); },
+        onError: (error) => { this.liveStatus = failure(error); },
+        onRankChange: (event) => {
+          this.rankNotice = event.type === "entered_top" ? "YOU ENTERED THE TOP 10!" : event.type === "left_top" ? "YOU LEFT THE TOP 10" : event.type === "rank_improved" ? `RANK UP! ${event.previousRank} TO ${event.rank}` : `OVERTAKEN! NOW RANK ${event.rank}`;
+          this.rankNoticeUntil = Date.now() + 6000;
+        },
+      });
+    } catch (error) { this.liveStatus = failure(error); }
+  }
+  stopLive() { this.live?.unsubscribe(); this.live = undefined; }
   browseMode: "top" | "around" = "top";
   browseEntries: Standing[] = [];
   browseStatus = "LEADERBOARD NOT LOADED";
@@ -249,6 +280,7 @@ export class Leaderboard {
     let stage = "PLAYER SESSION";
     try {
       await deadline(this.ensurePlayer());
+      this.startLive();
       stage = "RANKINGS";
       const issue = await deadline(this.refresh(revision));
       if (revision === this.revision) {

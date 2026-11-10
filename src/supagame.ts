@@ -10,6 +10,7 @@ export interface Standing {
   rank: number;
   name: string;
   score: number;
+  isPlayer?: boolean;
 }
 interface StorageLike {
   getItem(key: string): string | null;
@@ -84,6 +85,12 @@ async function deadline<T>(promise: Promise<T>): Promise<T> {
 }
 
 export class Leaderboard {
+  browseMode: "top" | "around" = "top";
+  browseEntries: Standing[] = [];
+  browseStatus = "LEADERBOARD NOT LOADED";
+  browseLoading = false;
+  browseCanRetry = false;
+  private browseVersion = 0;
   persisted = false;
   best = 0;
   personalBest: number | null = null;
@@ -141,6 +148,96 @@ export class Leaderboard {
       })
       .catch(() => {});
     return operation;
+  }
+
+  async browse(mode: "top" | "around", hasProfile = true) {
+    const version = ++this.browseVersion;
+    this.browseMode = mode;
+    this.browseEntries = [];
+    this.browseLoading = false;
+    this.browseCanRetry = false;
+    if (!this.game) {
+      this.browseStatus = "BACKEND NOT CONFIGURED";
+      return;
+    }
+    if (mode === "around" && !hasProfile) {
+      this.browseStatus = "PLAY A ROUND TO GET RANKED";
+      return;
+    }
+    this.browseLoading = true;
+    this.browseStatus = "LOADING LEADERBOARD";
+    try {
+      const result = await deadline(
+        (async () => {
+          if (mode === "top") {
+            const page = await this.game!.leaderboards.getTop("vaccoin", {
+              limit: 10,
+            });
+            return page.entries.slice(0, 10).map((e) => ({
+              rank: e.rank,
+              name: e.displayName || "ANONYMOUS",
+              score: e.score,
+              ...(e.playerId === this.userId ? { isPlayer: true } : {}),
+            }));
+          }
+          await this.ensurePlayer();
+          if (version !== this.browseVersion) return [];
+          const mine = await this.game!.leaderboards.getMine("vaccoin");
+          if (version !== this.browseVersion) return [];
+          if (!mine) return null;
+          const neighbors: Standing[] = [];
+          let found = false,
+            following = 0;
+          let cursor: string | undefined;
+          const cursors = new Set<string>();
+          do {
+            const page = await this.game!.leaderboards.getTop("vaccoin", {
+              limit: 100,
+              ...(cursor ? { cursor } : {}),
+            });
+            if (version !== this.browseVersion) return [];
+            for (const e of page.entries) {
+              const isPlayer = e.playerId === mine.playerId;
+              neighbors.push({
+                rank: e.rank,
+                name: e.displayName || "ANONYMOUS",
+                score: e.score,
+                isPlayer,
+              });
+              if (isPlayer) found = true;
+              else if (found && ++following === 5) return neighbors;
+              if (!found && neighbors.length > 5) neighbors.shift();
+            }
+            if (!page.nextCursor) break;
+            if (cursors.has(page.nextCursor))
+              throw new Error("Repeated leaderboard cursor");
+            cursors.add(page.nextCursor);
+            cursor = page.nextCursor;
+          } while (version === this.browseVersion);
+          // A score can disappear or move while walking pages; never show unrelated rows.
+          if (!found) throw new Error("Player missing from leaderboard");
+          return neighbors;
+        })(),
+      );
+      if (version !== this.browseVersion) return;
+      this.browseEntries = result ?? [];
+      this.browseStatus =
+        result === null
+          ? "PLAY A ROUND TO GET RANKED"
+          : result.length
+            ? "GLOBAL / MOST COINS COLLECTED"
+            : "NO SCORES YET";
+    } catch (error) {
+      if (version !== this.browseVersion) return;
+      this.browseStatus = `LEADERBOARD UNAVAILABLE / ${failure(error)}`;
+      this.browseCanRetry = true;
+    } finally {
+      if (version === this.browseVersion) {
+        this.browseLoading = false;
+        // Stop pagination and discard late responses after a timeout.
+        this.browseVersion++;
+      }
+    }
   }
 
   async connect(name = this.name) {

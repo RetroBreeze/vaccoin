@@ -29,6 +29,7 @@ canvas {
   pointer-events: none;
 }
 #play,
+.leaderboard-control,
 #retry-leaderboard {
   position: fixed;
   z-index: 2;
@@ -41,6 +42,7 @@ canvas {
   padding: 0;
 }
 #play:focus-visible,
+.leaderboard-control:focus-visible,
 #retry-leaderboard:focus-visible {
   outline: 3px solid #fff2d2;
   outline-offset: 6px;

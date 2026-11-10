@@ -6,6 +6,7 @@ import {
   UnexpectedResponseError,
   type GameServices,
   type LeaderboardEntry,
+  type LeaderboardPage,
 } from "@supagame/sdk-ts";
 import { Leaderboard } from "../src/supagame";
 
@@ -37,7 +38,10 @@ function fixture() {
         score,
         bestScore: Math.max(800, score),
       })),
-      getTop: vi.fn(async () => ({ entries: [entry], nextCursor: null })),
+      getTop: vi.fn(async (): Promise<LeaderboardPage> => ({
+        entries: [entry],
+        nextCursor: null,
+      })),
       getMine: vi.fn(async () => entry as typeof entry | null),
     },
   } satisfies GameServices;
@@ -389,4 +393,106 @@ it("fits a personal-best API error after submission on the minimum results width
   expect(board.status).toContain("SCORE SUBMITTED / PERSONAL BEST UNAVAILABLE");
   expect(board.status).toContain("LEADERBOARD_NOT_FOUND");
   expect(textWidth(board.status, 1)).toBeLessThanOrEqual(500);
+});
+
+it("browses public top ten without creating a player session", async () => {
+  const { board, game } = fixture();
+  await board.browse("top", false);
+  expect(board.browseEntries).toEqual([{ rank: 12, name: "Mara", score: 800 }]);
+  expect(game.players.ensureAnonymousSession).not.toHaveBeenCalled();
+  expect(game.leaderboards.submit).not.toHaveBeenCalled();
+});
+
+it("finds five neighbors on either side across pages, including tied ranks", async () => {
+  const { board, game } = fixture();
+  const rows = Array.from({ length: 18 }, (_, i) => ({
+    ...entry,
+    playerId: i === 9 ? entry.playerId : `other-${i}`,
+    displayName: `Person ${i + 1}`,
+    rank: i >= 6 && i <= 10 ? 7 : i + 1,
+  }));
+  game.leaderboards.getTop
+    .mockResolvedValueOnce({ entries: rows.slice(0, 8), nextCursor: "page2" })
+    .mockResolvedValueOnce({ entries: rows.slice(8), nextCursor: null });
+  await board.browse("around");
+  expect(board.browseEntries.map((e) => e.name)).toEqual([
+    "Person 5",
+    "Person 6",
+    "Person 7",
+    "Person 8",
+    "Person 9",
+    "Person 10",
+    "Person 11",
+    "Person 12",
+    "Person 13",
+    "Person 14",
+    "Person 15",
+  ]);
+  expect(board.browseEntries[5].isPlayer).toBe(true);
+  expect(game.leaderboards.getTop).toHaveBeenLastCalledWith("vaccoin", {
+    limit: 100,
+    cursor: "page2",
+  });
+});
+
+it.each([0, 7])(
+  "clips nearby standings at the board boundary (index %s)",
+  async (index) => {
+    const { board, game } = fixture();
+    game.leaderboards.getTop.mockResolvedValue({
+      entries: Array.from({ length: 8 }, (_, i) => ({
+        ...entry,
+        playerId: i === index ? entry.playerId : `other-${i}`,
+        rank: i + 1,
+      })),
+      nextCursor: null,
+    });
+    await board.browse("around");
+    expect(board.browseEntries.map((e) => e.rank)).toEqual(
+      index === 0 ? [1, 2, 3, 4, 5, 6] : [3, 4, 5, 6, 7, 8],
+    );
+  },
+);
+
+it("explains an unranked player without scanning scores", async () => {
+  const { board, game } = fixture();
+  game.leaderboards.getMine.mockResolvedValue(null);
+  await board.browse("around");
+  expect(board.browseEntries).toEqual([]);
+  expect(board.browseStatus).toContain("PLAY A ROUND");
+  expect(game.leaderboards.getTop).not.toHaveBeenCalled();
+});
+
+it("keeps a late nearby read from replacing a newer top ten view", async () => {
+  const { board, game } = fixture();
+  let resolve!: (value: typeof entry | null) => void;
+  game.leaderboards.getMine.mockImplementationOnce(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  const around = board.browse("around");
+  await vi.waitFor(() => expect(game.leaderboards.getMine).toHaveBeenCalled());
+  await board.browse("top");
+  resolve(null);
+  await around;
+  expect(board.browseEntries).toHaveLength(1);
+  expect(board.browseMode).toBe("top");
+  expect(board.browseStatus).not.toContain("PLAY A ROUND");
+});
+
+it("bounds nearby reads and allows retry without accepting late data", async () => {
+  vi.useFakeTimers();
+  const { board, game } = fixture();
+  game.leaderboards.getTop.mockImplementationOnce(() => new Promise(() => {}));
+  const pending = board.browse("around");
+  await vi.advanceTimersByTimeAsync(5001);
+  await pending;
+  expect(board.browseLoading).toBe(false);
+  expect(board.browseCanRetry).toBe(true);
+  expect(board.browseStatus).toContain("TIMED OUT");
+  await board.browse("top");
+  expect(board.browseEntries).toHaveLength(1);
+  expect(board.browseCanRetry).toBe(false);
 });

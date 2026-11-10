@@ -35,6 +35,16 @@ async function boot() {
   retryButton.setAttribute("aria-label", "Retry rankings");
   retryButton.style.display = "none";
   button.after(retryButton);
+  const leaderboardControls = Object.fromEntries(
+    ["open", "top", "around", "back"].map((action) => {
+      const control = button.cloneNode(false) as HTMLButtonElement;
+      control.id = `leaderboard-${action}`;
+      control.className = "leaderboard-control";
+      button.after(control);
+      return [action, control];
+    }),
+  ) as Record<"open" | "top" | "around" | "back", HTMLButtonElement>;
+  let leaderboardOpen = false;
   const fullscreenButton =
     document.querySelector<HTMLButtonElement>("#fullscreen")!;
   const pauseButton = document.querySelector<HTMLButtonElement>("#pause")!;
@@ -97,8 +107,33 @@ async function boot() {
     audio = new AudioEngine(),
     round = new Round(),
     leaderboard = new Leaderboard(undefined, configuredGameServices()),
-    ui = new UI(uiCanvas, button, soundButton, retryButton);
-  retryButton.addEventListener("click", () => void leaderboard.retry());
+    ui = new UI(
+      uiCanvas,
+      button,
+      soundButton,
+      retryButton,
+      leaderboardControls,
+    );
+  const browse = (mode: "top" | "around") =>
+    void leaderboard.browse(mode, !!profile.name);
+  function closeLeaderboard() {
+    leaderboardOpen = false;
+    namePanel.hidden = !!profile.name;
+    requestAnimationFrame(() => leaderboardControls.open.focus());
+  }
+  leaderboardControls.open.addEventListener("click", () => {
+    leaderboardOpen = true;
+    namePanel.hidden = true;
+    browse("top");
+    requestAnimationFrame(() => leaderboardControls.top.focus());
+  });
+  leaderboardControls.top.addEventListener("click", () => browse("top"));
+  leaderboardControls.around.addEventListener("click", () => browse("around"));
+  leaderboardControls.back.addEventListener("click", closeLeaderboard);
+  retryButton.addEventListener("click", () => {
+    if (leaderboardOpen) browse(leaderboard.browseMode);
+    else void leaderboard.retry();
+  });
   const destructibles = new Destructibles(
     view.scene,
     assets,
@@ -199,6 +234,7 @@ async function boot() {
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
+    if (leaderboardOpen) return;
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -278,6 +314,19 @@ async function boot() {
   });
   document.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("keydown", (e) => {
+    if (
+      e.target instanceof HTMLButtonElement &&
+      (e.code === "Enter" || e.code === "Space")
+    )
+      return;
+    if (leaderboardOpen) {
+      if (e.code === "Escape") {
+        e.preventDefault();
+        closeLeaderboard();
+      }
+      // Let native buttons handle Enter/Space without starting a round.
+      return;
+    }
     if (e.target instanceof HTMLInputElement) {
       if (e.code === "Enter" && !e.repeat) {
         e.preventDefault();
@@ -443,6 +492,12 @@ async function boot() {
       }
     }
     uiState.phase = round.phase;
+    uiState.leaderboardOpen = leaderboardOpen;
+    uiState.browseMode = leaderboard.browseMode;
+    uiState.browseEntries = leaderboard.browseEntries;
+    uiState.browseStatus = leaderboard.browseStatus;
+    uiState.browseLoading = leaderboard.browseLoading;
+    uiState.browseCanRetry = leaderboard.browseCanRetry;
     uiState.score = round.score;
     uiState.remaining = round.phase === "playing" ? round.remaining(now) : 60;
     uiState.best = leaderboard.best;
@@ -474,6 +529,12 @@ async function boot() {
     Object.assign(window, {
       vaccoinQA: {
         snapshot: () => ({
+          leaderboardBrowser: {
+            open: leaderboardOpen,
+            mode: leaderboard.browseMode,
+            entries: leaderboard.browseEntries,
+            status: leaderboard.browseStatus,
+          },
           phase: round.phase,
           score: round.score,
           remaining: round.remaining(performance.now()),

@@ -2,6 +2,12 @@ import { pixelText } from "./pixel-font";
 import { Phase } from "./round";
 import { Standing } from "./supagame";
 export interface UIState {
+  leaderboardOpen?: boolean;
+  browseMode?: "top" | "around";
+  browseEntries?: Standing[];
+  browseStatus?: string;
+  browseLoading?: boolean;
+  browseCanRetry?: boolean;
   phase: Phase;
   controlHint?: string;
   mobile?: boolean;
@@ -41,6 +47,12 @@ export class UI {
     private button: HTMLButtonElement,
     private sound: HTMLButtonElement,
     private retry: HTMLButtonElement,
+    private leaderboard?: {
+      open: HTMLButtonElement;
+      top: HTMLButtonElement;
+      around: HTMLButtonElement;
+      back: HTMLButtonElement;
+    },
   ) {
     this.ctx = canvas.getContext("2d")!;
     button.addEventListener("mouseenter", () => (this.hovered = true));
@@ -85,6 +97,101 @@ export class UI {
     this.button.textContent = label;
     this.button.setAttribute("aria-label", label);
   }
+  private menuButton(
+    button: HTMLButtonElement,
+    label: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    active = false,
+  ) {
+    this.rect(x, y, width, height, active ? C.gold : C.dark);
+    this.text(
+      label,
+      x + width / 2,
+      y + (height - 14) / 2,
+      2,
+      active ? C.dark : C.gold,
+      "center",
+    );
+    button.textContent = label;
+    button.setAttribute("aria-label", label);
+    Object.assign(button.style, {
+      display: "block",
+      left: `${(x / this.w) * 100}%`,
+      top: `${(y / 540) * 100}%`,
+      width: `${(width / this.w) * 100}%`,
+      height: `${(height / 540) * 100}%`,
+    });
+  }
+  private drawLeaderboard(s: UIState, cx: number) {
+    const controls = this.leaderboard!;
+    this.rect(0, 0, this.w, 540, "#0b2036ed");
+    this.text("LEADERBOARD", cx, 45, 4, C.gold, "center");
+    this.menuButton(
+      controls.top,
+      "TOP 10",
+      cx - 230,
+      98,
+      220,
+      36,
+      s.browseMode !== "around",
+    );
+    this.menuButton(
+      controls.around,
+      "AROUND YOU",
+      cx + 10,
+      98,
+      220,
+      36,
+      s.browseMode === "around",
+    );
+    controls.top.setAttribute(
+      "aria-pressed",
+      String(s.browseMode !== "around"),
+    );
+    controls.around.setAttribute(
+      "aria-pressed",
+      String(s.browseMode === "around"),
+    );
+    for (const [i, e] of (s.browseEntries ?? []).slice(0, 11).entries()) {
+      const y = 160 + i * 22;
+      if (e.isPlayer) this.rect(cx - 240, y - 5, 480, 22, "#28505d");
+      this.text(
+        `${e.rank}. ${Array.from(e.name).slice(0, 18).join("")}${e.isPlayer ? " (YOU)" : ""}`,
+        cx - 230,
+        y,
+        2,
+        e.isPlayer ? C.mint : C.muted,
+      );
+      this.text(
+        e.score.toLocaleString("en-US"),
+        cx + 230,
+        y,
+        2,
+        C.gold,
+        "right",
+      );
+    }
+    if (!s.browseEntries?.length)
+      this.text(
+        s.browseLoading
+          ? "LOADING LEADERBOARD"
+          : s.browseCanRetry
+            ? "LEADERBOARD UNAVAILABLE"
+            : (s.browseStatus ?? ""),
+        cx,
+        225,
+        2,
+        C.muted,
+        "center",
+      );
+    this.text(s.browseStatus ?? "", cx, 413, 1, C.muted, "center");
+    if (s.browseCanRetry && !s.browseLoading)
+      this.menuButton(this.retry, "RETRY RANKINGS", cx - 112, 437, 224, 28);
+    this.menuButton(controls.back, "BACK", cx - 112, 478, 224, 36);
+  }
   draw(s: UIState, dt: number) {
     const c = this.ctx,
       w = this.w,
@@ -92,6 +199,9 @@ export class UI {
     c.clearRect(0, 0, w, 540);
     this.button.style.display = "none";
     this.retry.style.display = "none";
+    if (this.leaderboard)
+      for (const control of Object.values(this.leaderboard))
+        control.style.display = "none";
     this.sound.style.display = s.phase === "playing" ? "none" : "block";
     this.sound.style.left = `${((w - 48) / w) * 100}%`;
     this.sound.setAttribute(
@@ -130,13 +240,26 @@ export class UI {
         this.playButton("RESUME", cx - 115, 246, 230);
       }
     } else if (s.phase === "title") {
-      this.rect(0, 0, w, 540, "#10283766");
-      const titleY = s.mobile ? 115 : 155;
-      this.text("VACCOIN", cx + 5, titleY + 6, 10, "#493f35", "center");
-      this.text("VACCOIN", cx, titleY, 10, C.gold, "center");
-      this.playButton("PLAY", cx - 128, 302, 256);
-      if (s.controlHint)
-        this.text(s.controlHint, cx, 418, 1, C.muted, "center");
+      if (s.leaderboardOpen && this.leaderboard) {
+        this.drawLeaderboard(s, cx);
+      } else {
+        this.rect(0, 0, w, 540, "#10283766");
+        const titleY = s.mobile ? 115 : 155;
+        this.text("VACCOIN", cx + 5, titleY + 6, 10, "#493f35", "center");
+        this.text("VACCOIN", cx, titleY, 10, C.gold, "center");
+        this.playButton("PLAY", cx - 128, 302, 256);
+        if (this.leaderboard)
+          this.menuButton(
+            this.leaderboard.open,
+            "LEADERBOARD",
+            cx - 128,
+            364,
+            256,
+            36,
+          );
+        if (s.controlHint)
+          this.text(s.controlHint, cx, 418, 1, C.muted, "center");
+      }
     } else {
       this.rect(0, 0, w, 540, "#0b2036bd");
       this.text(s.score.toLocaleString("en-US"), cx, 45, 8, C.gold, "center");

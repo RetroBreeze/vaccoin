@@ -136,6 +136,12 @@ export class Leaderboard {
   name = "YOU";
   loading = false;
   canRetry = false;
+  private storageKey = KEY;
+  setAccountScope(scope: string) {
+    this.storageKey = `${KEY}:${scope}`;
+    this.best = 0; this.personalBest = null; this.rank = null;
+    try { const value = Number(this.storage?.getItem(this.storageKey) ?? 0); if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_COINS) this.best = value; } catch { /* Optional local best. */ }
+  }
   private identity?: Promise<string>;
   private readyName?: string;
   private userId?: string;
@@ -310,7 +316,7 @@ export class Leaderboard {
       return;
     this.best = Math.max(this.best, score);
     try {
-      this.storage?.setItem(KEY, String(this.best));
+      this.storage?.setItem(this.storageKey, String(this.best));
       this.persisted = !!this.storage;
     } catch {
       this.persisted = false;

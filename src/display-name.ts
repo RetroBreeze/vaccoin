@@ -21,6 +21,12 @@ function normalize(value: string): string | undefined {
 }
 export class DisplayName {
   name = "";
+  private key = KEY;
+  bind(scope: string, adoptLegacy = false) {
+    this.key = `${KEY}:${scope}`;
+    try { this.name = normalize(this.storage?.getItem(this.key) ?? "") ?? (adoptLegacy ? this.name : ""); }
+    catch { if (!adoptLegacy) this.name = ""; }
+  }
   constructor(private storage: StorageLike | undefined = browserStorage()) {
     try {
       this.name = normalize(storage?.getItem(KEY) ?? "") ?? "";
@@ -33,7 +39,7 @@ export class DisplayName {
     if (!name) return false;
     this.name = name;
     try {
-      this.storage?.setItem(KEY, name);
+      this.storage?.setItem(this.key, name);
     } catch {
       // Storage is optional.
     }

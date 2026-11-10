@@ -1,3 +1,5 @@
+import { Accounts } from './accounts';
+import { AccountUI } from './account-ui';
 import { Workshop, type WorkshopRecord } from './workshop';
 import { WorkshopUI } from './workshop-ui';
 import { createIndexedDbStore } from '@supagame/sdk-ts/browser';
@@ -121,6 +123,7 @@ async function boot() {
     activePlayer = id;
     try { if (id) localStorage.setItem(identityKey, id); else localStorage.removeItem(identityKey); } catch { /* IndexedDB still reports its own persistence failures. */ }
   };
+  if (activePlayer) profile.bind(`${connection?.namespace ?? 'local'}:${activePlayer}`, false);
   connection?.supabase.auth.onAuthStateChange((event, session) => {
     if (session) rememberPlayer(session.user.id);
     else if (event === 'SIGNED_OUT') rememberPlayer(null);
@@ -138,6 +141,7 @@ async function boot() {
       retryButton,
       leaderboardControls,
     );
+  leaderboard.setAccountScope(`${connection?.namespace ?? 'local'}:${activePlayer ?? 'local-guest'}`);
   const workshop = new Workshop({
     saves: connection?.game.saves,
     store: createIndexedDbStore<WorkshopRecord>('vaccoin-workshop-v1'),
@@ -176,7 +180,42 @@ async function boot() {
     await workshop.initialize();
     audio.setMuted(workshop.progress.preferences.muted);
   };
-  void prepareWorkshop();
+  const accounts = new Accounts(connection?.game, workshop, connection?.namespace ?? 'local');
+  const accountUI = new AccountUI(ui, accounts, () => {
+    leaderboardOpen = false; achievementsOpen = false; workshopUI.setOpen(false); pauseControls();
+  });
+  let accountBooted = false;
+  let runtimePlayer: string | null = null;
+  connection?.game.players.onAuthStateChange((state, event) => {
+    if (event === 'INITIAL_SESSION' || !accountBooted) return;
+    if (state.userId !== runtimePlayer) {
+      // A fresh runtime isolates pending runs, profile caches, notifications and sockets.
+      accountBooted = false;
+      void workshop.pauseForAccount(); leaderboard.stopLive(); leaderboard.achievements.dispose();
+      pauseControls();
+      setTimeout(() => location.reload(), 0);
+    }
+  });
+  const accountStartup = (async () => {
+    await accounts.initialize();
+    await prepareWorkshop();
+    try {
+      await accounts.refresh();
+      runtimePlayer = accounts.status.userId;
+      if (connection && runtimePlayer) {
+        // Names and local bests are user-specific; cloud identity is authoritative after recovery.
+        const scope = `${connection.namespace}:${runtimePlayer}`;
+        profile.bind(scope, accounts.status.isAnonymous);
+        leaderboard.setAccountScope(scope);
+        const remote = await connection.game.players.getMe();
+        if (remote.displayName) profile.save(remote.displayName);
+        else if (!accounts.status.isAnonymous) profile.name = '';
+        nameInput.value = profile.name;
+        leaderboard.name = profile.name || 'YOU';
+      }
+    } catch { /* Offline local play remains available; never replace a rejected session. */ }
+    accountBooted = true;
+  })();
   window.addEventListener('online', () => void workshop.sync());
   window.addEventListener('focus', () => void workshop.sync());
   setInterval(() => { if (!document.hidden) void workshop.sync(); }, 30000);
@@ -249,8 +288,7 @@ async function boot() {
   status.classList.add("hidden");
   status.textContent = "Ready. Play Vaccoin. Headphones recommended.";
   leaderboard.name = profile.name || "YOU";
-  if (profile.name) void leaderboard.connect(profile.name);
-  else void leaderboard.prepareLive();
+  void accountStartup.then(() => { if (profile.name) void leaderboard.connect(profile.name); else void leaderboard.prepareLive(); });
   document.addEventListener("visibilitychange", () => {
     leaderboard.achievements.update(round.phase, document.hidden);
     if (document.hidden) leaderboard.stopLive();
@@ -311,7 +349,7 @@ async function boot() {
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
-    if (leaderboardOpen || achievementsOpen || workshopUI.open) return;
+    if (leaderboardOpen || achievementsOpen || workshopUI.open || accounts.open || accounts.busy) return;
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -397,6 +435,7 @@ async function boot() {
       (e.code === "Enter" || e.code === "Space")
     )
       return;
+    if (accounts.open) return;
     if (workshopUI.open) { if (e.code === 'Escape') workshopUI.setOpen(false); return; }
     if (achievementsOpen) { if (e.code === 'Escape') { achievementsOpen = false; achievementsButton.focus(); } return; }
     if (leaderboardOpen) {
@@ -515,7 +554,7 @@ async function boot() {
       if (round.phase === "playing" && controlsActive()) pauseControls();
       else void play(false, "gamepad");
     }
-    rotatePrompt.hidden = !portrait();
+    rotatePrompt.hidden = !portrait() || round.phase === "title" || accounts.open;
     if (portrait() && (portableActive || locked)) pauseControls();
     const active = round.phase === "playing" && controlsActive();
     pauseButton.hidden = round.phase !== "playing" || !active;
@@ -580,7 +619,7 @@ async function boot() {
       namePanel.style.top = `${(layout.nameY / 540) * 100}%`;
       namePanel.style.width = `${(256 / ui.w) * 100}%`;
     }
-    const titleVisible = round.phase === "title" && !leaderboardOpen && !achievementsOpen && !workshopUI.open;
+    const titleVisible = round.phase === "title" && !leaderboardOpen && !achievementsOpen && !workshopUI.open && !accounts.open;
     namePanel.hidden = !titleVisible || !!profile.name;
     uiState.liveEntries = leaderboard.liveEntries;
     uiState.liveStatus = leaderboard.liveStatus;
@@ -627,7 +666,12 @@ async function boot() {
     if (workshopUI.open) {
       for (const b of [button, retryButton, achievementsButton, ...Object.values(leaderboardControls)]) b.style.display = 'none';
     }
-    workshopUI.draw(titleVisible, round.phase === 'results');
+    workshopUI.draw(titleVisible, round.phase === 'results' && !accounts.open);
+    accountUI.draw(titleVisible);
+    if (accounts.open) {
+      for (const b of [button, retryButton, achievementsButton, ...Object.values(leaderboardControls)]) b.style.display = 'none';
+      for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('[id^="workshop-"]'))) b.style.display = 'none';
+    }
 
   }
   // Deliberately dev-only QA hooks; stripped out of the production build.

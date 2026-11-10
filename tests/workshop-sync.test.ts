@@ -198,3 +198,13 @@ it("does not replace remote progress with defaults when a run finishes before hy
   expect(w.progress.wallet).toBe(5100);
   expect(w.progress.completedRuns).toBe(2);
 });
+it('pauses syncing, captures pending guest operations and archives target state on replacement',async()=>{
+ const f=fixture(),workshop=f.make();await workshop.initialize();
+ await workshop.pauseForAccount();
+ await workshop.complete({id:'offline-run',score:20});
+ const snapshot=await workshop.prepareAccountSnapshot();expect(snapshot.data).toMatchObject({wallet:20});
+ const writes=vi.mocked(f.saves.save).mock.calls.length;await workshop.sync();expect(vi.mocked(f.saves.save).mock.calls).toHaveLength(writes);
+ f.setRemote(cloud(applyOperation(emptyProgress(),{id:'cloud-run',type:'run',coins:40}),2));
+ await workshop.acceptAccountCloud();expect(workshop.progress.wallet).toBe(40);
+ const recovery=JSON.parse(await workshop.exportRecovery());expect(recovery.pending).toEqual([]);expect(recovery.archives[0].snapshot.wallet).toBe(20);
+});

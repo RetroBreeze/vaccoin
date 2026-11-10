@@ -7,6 +7,7 @@ import {
   type Saves,
   type Saved,
   type LocalStore,
+  type TransferSave,
 } from "@supagame/sdk-ts";
 import {
   applyOperation,
@@ -59,6 +60,7 @@ export class Workshop {
   owner: string | null = null;
   conflict: Saved<Progress> | null = null;
   private key = "";
+  private accountPaused = false;
   private running?: Promise<void>;
   private localReady?: Promise<void>;
   constructor(private options: Options) {}
@@ -193,6 +195,7 @@ export class Workshop {
     }
   }
   async sync() {
+    if (this.accountPaused) return;
     if (this.running) return this.running;
     if (!this.ready || !this.options.saves || this.owner === "local-guest") {
       if (this.ready) this.status = "LOCAL WORKSHOP / NO CLOUD SESSION";
@@ -322,6 +325,31 @@ export class Workshop {
     });
     this.show(state);
     this.status = "CLOUD SELECTED / LOCAL COPY ARCHIVED";
+  }
+  async pauseForAccount() {
+    this.accountPaused = true;
+    await this.running;
+  }
+  resumeAfterAccount() { this.accountPaused = false; }
+  async prepareAccountSnapshot(): Promise<TransferSave> {
+    await this.pauseForAccount();
+    await this.localReady;
+    if (!this.ready || !await this.same()) throw new Error('RESTORE WORKSHOP BEFORE SIGN IN');
+    await this.recoverRuns();
+    const state = await this.current();
+    return {slot: WORKSHOP_SLOT, kind: 'json', data: validateProgress(state.snapshot), schemaVersion: 1, metadata: {game:'vaccoin',profile:'cosmetic-workshop'}};
+  }
+  /** Discard no pending operations: archive the old local queue before using target cloud. */
+  async acceptAccountCloud() {
+    await this.pauseForAccount();
+    if (!this.options.saves || !await this.same()) throw new Error('RESTORE ACCOUNT FIRST');
+    let cloud: Saved<Progress> | null;
+    try { cloud = await this.options.saves.load<Progress>(WORKSHOP_SLOT); }
+    catch (error) { if (error instanceof ApiError && error.code === 'SAVE_NOT_FOUND') cloud = null; else throw error; }
+    if (!await this.same()) throw new Error('ACCOUNT CHANGED');
+    const snapshot = cloud && !cloud.deleted ? validateProgress(cloud.data) : emptyProgress();
+    const state = await this.options.store.update(this.key, previous => ({base:cloud,snapshot,pending:[],archives:[...(previous?.archives ?? []),{...(previous ?? blank()),archives:[]}]}));
+    this.show(state); this.accountPaused = false; this.status = 'CLOUD SAVED / PREVIOUS LOCAL COPY ARCHIVED';
   }
   async exportRecovery() {
     return JSON.stringify(await this.current(), null, 2);

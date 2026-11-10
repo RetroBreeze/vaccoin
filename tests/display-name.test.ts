@@ -39,3 +39,8 @@ it("allows play when local storage is blocked and ignores invalid saved names", 
     "",
   );
 });
+
+it('isolates display names when account changes',()=>{
+ const values=new Map<string,string>();const storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v);}};
+ const profile=new DisplayName(storage);profile.save('Guest');profile.bind('project:guest',true);profile.save('Guest');profile.bind('project:google',false);expect(profile.name).toBe('');profile.save('Google');profile.bind('project:guest',false);expect(profile.name).toBe('Guest');
+});

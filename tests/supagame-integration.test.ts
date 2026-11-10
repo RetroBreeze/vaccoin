@@ -19,7 +19,7 @@ const entry: LeaderboardEntry = {
 };
 function fixture() {
   const game = {
-    saves: { save:vi.fn(), load:vi.fn(), list:vi.fn(), delete:vi.fn(), saveBinary:vi.fn(), loadBinary:vi.fn(), abortBinary:vi.fn(), cleanup:vi.fn() },
+    saves: { prepareAccountSwitch:vi.fn(), pendingAccountSwitch:vi.fn(), inspectAccountSwitch:vi.fn(), resolveAccountSwitch:vi.fn(), getAccountSwitchRecovery:vi.fn(), discardAccountSwitch:vi.fn(), save:vi.fn(), load:vi.fn(), list:vi.fn(), delete:vi.fn(), saveBinary:vi.fn(), loadBinary:vi.fn(), abortBinary:vi.fn(), cleanup:vi.fn() },
     achievements: {
       listAchievements: vi.fn(async () => []),
       getPlayerAchievements: vi.fn(async () => []),
@@ -31,6 +31,7 @@ function fixture() {
       dispose: vi.fn(),
     },
     players: {
+      getAuthStatus:vi.fn(), restoreSession:vi.fn(), linkProvider:vi.fn(), signInWithProvider:vi.fn(), handleAuthCallback:vi.fn(), signOut:vi.fn(), onAuthStateChange:vi.fn(),
       ensureAnonymousSession: vi.fn(async () => ({ userId: "player-1" })),
       getMe: vi.fn(async () => ({
         playerId: "player-1",

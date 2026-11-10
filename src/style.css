@@ -92,7 +92,7 @@ canvas {
   transform: translateX(-50%);
   width: min(300px, 80vw);
   color: #fff2d2;
-  font-size: clamp(10px, 1.7vh, 16px);
+  font-size: 1.7vh;
 }
 #player-name[hidden] {
   display: none;
@@ -103,14 +103,14 @@ canvas {
 }
 #display-name {
   width: 100%;
-  margin: 4px 0;
-  padding: 6px 10px;
+  margin: 0.6vh 0;
+  padding: 1vh 10px;
   border: 2px solid #96b6c2;
   border-radius: 0;
   background: #102837;
   color: #fff2d2;
   font: inherit;
-  font-size: clamp(14px, 2.5vh, 22px);
+  font-size: 2.5vh;
 }
 #display-name:focus {
   outline: 2px solid #ffcf58;

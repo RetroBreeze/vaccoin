@@ -1,0 +1,2 @@
+# Title screen redesign
+Approved by the user: pixel-art logo and menu on the left, live top-ten panel on the right, oversized rainbow champion pinned above scrolling ranks 2–10, and falling coins behind the interface. Stack panels on narrow screens. Preserve existing controls, name entry, live service and leaderboard browser. Use smooth color cycling rather than strobing, and respect reduced motion. Implement with the existing canvas renderer without new dependencies.

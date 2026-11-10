@@ -1,3 +1,4 @@
+import { titleLayout } from "./title-screen";
 import "./style.css";
 import { Vector3 } from "three";
 import { Assets } from "./assets";
@@ -190,7 +191,9 @@ async function boot() {
     else void leaderboard.prepareLive();
   });
   window.addEventListener("pagehide", () => leaderboard.stopLive());
-  window.addEventListener("pageshow", (event) => { if (event.persisted) void leaderboard.prepareLive(); });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) void leaderboard.prepareLive();
+  });
   function stopInput() {
     keys.clear();
     mouseDown = false;
@@ -498,9 +501,16 @@ async function boot() {
         view.camera.updateProjectionMatrix();
       }
     }
+    if (round.phase === "title") {
+      const layout = titleLayout(ui.w);
+      namePanel.style.left = `${(layout.nameX / ui.w) * 100}%`;
+      namePanel.style.top = `${(layout.nameY / 540) * 100}%`;
+      namePanel.style.width = `${(256 / ui.w) * 100}%`;
+    }
     uiState.liveEntries = leaderboard.liveEntries;
     uiState.liveStatus = leaderboard.liveStatus;
-    uiState.rankNotice = Date.now() < leaderboard.rankNoticeUntil ? leaderboard.rankNotice : "";
+    uiState.rankNotice =
+      Date.now() < leaderboard.rankNoticeUntil ? leaderboard.rankNotice : "";
     uiState.phase = round.phase;
     uiState.leaderboardOpen = leaderboardOpen;
     uiState.browseMode = leaderboard.browseMode;
@@ -539,7 +549,11 @@ async function boot() {
     Object.assign(window, {
       vaccoinQA: {
         snapshot: () => ({
-          live: {entries:leaderboard.liveEntries, status:leaderboard.liveStatus, notice:leaderboard.rankNotice},
+          live: {
+            entries: leaderboard.liveEntries,
+            status: leaderboard.liveStatus,
+            notice: leaderboard.rankNotice,
+          },
           leaderboardBrowser: {
             open: leaderboardOpen,
             mode: leaderboard.browseMode,

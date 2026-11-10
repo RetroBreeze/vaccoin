@@ -18,6 +18,11 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`${origin}/?qa`);
   await page.waitForFunction(() => window.vaccoinQA);
+  await page.waitForFunction(
+    () => window.vaccoinQA.snapshot().live.status === "CONNECTED",
+  );
+  const initialSessions = calls.signups;
+  await page.screenshot({ path: "test-results/title-redesign-desktop.png" });
   await page.getByRole("button", { name: "LEADERBOARD", exact: true }).focus();
   await page.keyboard.press("Enter");
   assert.equal(
@@ -37,14 +42,22 @@ try {
   await page.waitForFunction(
     () => window.vaccoinQA.snapshot().leaderboardBrowser.entries.length === 10,
   );
-  assert.equal(calls.signups, 0);
+  assert.equal(
+    calls.signups,
+    initialSessions,
+    "browsing creates no additional sessions",
+  );
   await page.getByRole("button", { name: "AROUND YOU", exact: true }).click();
   await page.waitForFunction(() =>
     window.vaccoinQA
       .snapshot()
       .leaderboardBrowser.status.includes("PLAY A ROUND"),
   );
-  assert.equal(calls.signups, 0);
+  assert.equal(
+    calls.signups,
+    initialSessions,
+    "browsing creates no additional sessions",
+  );
   await page.getByRole("button", { name: "BACK", exact: true }).click();
   assert.equal(await page.locator("#player-name").isVisible(), true);
   assert.equal(
@@ -108,6 +121,7 @@ try {
     () => !window.vaccoinQA.snapshot().leaderboardBrowser.open,
   );
   assert.equal(await page.locator("#play").isVisible(), true);
+  await page.screenshot({ path: "test-results/title-redesign-narrow.png" });
   await page.route("**/leaderboards/vaccoin/entries?*", (route) =>
     route.fulfill({
       status: 503,

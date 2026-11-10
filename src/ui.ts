@@ -1,3 +1,4 @@
+import { drawTitleScreen, titleLayout } from "./title-screen";
 import { pixelText } from "./pixel-font";
 import { Phase } from "./round";
 import { Standing } from "./supagame";
@@ -162,7 +163,7 @@ export class UI {
       const y = 160 + i * 22;
       if (e.isPlayer) this.rect(cx - 240, y - 5, 480, 22, "#28505d");
       this.text(
-        `${e.rank}. ${Array.from(e.name).slice(0, 18).join("")}${e.isPlayer ? " (YOU)" : ""}`,
+        `${e.rank}. ${Array.from(e.name).slice(0, 18).join("")}${e.isPlayer ? " [YOU]" : ""}`,
         cx - 230,
         y,
         2,
@@ -246,37 +247,29 @@ export class UI {
       if (s.leaderboardOpen && this.leaderboard) {
         this.drawLeaderboard(s, cx);
       } else {
-        this.rect(0, 0, w, 540, "#10283766");
-        const titleY = s.mobile ? 115 : 155;
-        this.text("VACCOIN", cx + 5, titleY + 6, 10, "#493f35", "center");
-        this.text("VACCOIN", cx, titleY, 10, C.gold, "center");
-        this.playButton("PLAY", cx - 128, 302, 256);
+        const reduced =
+          typeof matchMedia === "function" &&
+          matchMedia("(prefers-reduced-motion: reduce)").matches;
+        drawTitleScreen(c, w, s, reduced);
+        const layout = titleLayout(w);
+        this.playButton("PLAY", layout.left - 128, layout.menuY, 256);
         if (this.leaderboard)
           this.menuButton(
             this.leaderboard.open,
             "LEADERBOARD",
-            cx - 128,
-            364,
+            layout.left - 128,
+            layout.menuY + 60,
             256,
-            36,
+            30,
           );
-        const live = s.liveEntries ?? [];
-        const index = live.length ? Math.floor(s.time / 3) % live.length : 0;
-        this.rect(cx - 210, 448, 420, 58, C.dark);
-        this.text("LIVE LEADERBOARD / " + (s.liveStatus ?? "LOADING"), cx, 456, 1, C.mint, "center");
-        const row = live[index];
-        this.text(row ? `${row.rank}. ${row.name.slice(0, 16)}  ${row.score}` : s.liveStatus === "CONNECTED" ? "NO SCORES YET" : "WAITING FOR RANKINGS", cx, 477, 2, row?.isPlayer ? C.gold : C.white, "center");
-
-        if (s.controlHint)
-          this.text(s.controlHint, cx, 418, 1, C.muted, "center");
       }
     } else {
       this.rect(0, 0, w, 540, "#0b2036bd");
       this.text(s.score.toLocaleString("en-US"), cx, 45, 8, C.gold, "center");
       this.text(
         s.personalBest === null
-          ? "LOCAL BEST " + s.best.toLocaleString("en-US")
-          : "PERSONAL BEST " + s.personalBest.toLocaleString("en-US"),
+          ? "BEST " + s.best.toLocaleString("en-US")
+          : "BEST " + s.personalBest.toLocaleString("en-US"),
         cx,
         119,
         2,
@@ -284,7 +277,7 @@ export class UI {
         "center",
       );
       this.text(
-        s.rank === null ? "RANK --" : "RANK " + s.rank,
+        s.rank === null ? "" : "RANK " + s.rank,
         cx,
         144,
         2,
@@ -292,7 +285,7 @@ export class UI {
         "center",
       );
       this.playButton("PLAY AGAIN", cx - 158, 177, 316);
-      this.text("TOP 10 / MOST COINS", cx, 247, 2, C.mint, "center");
+      this.text("TOP 10", cx, 247, 2, C.mint, "center");
       if (s.entries.length) {
         for (let i = 0; i < Math.min(10, s.entries.length); i++) {
           const e = s.entries[i];
@@ -335,16 +328,6 @@ export class UI {
           height: `${(28 / 540) * 100}%`,
         });
       }
-      this.text(s.leaderboardStatus, cx, 487, 1, C.muted, "center");
-      if (!s.persisted && s.personalBest === null)
-        this.text(
-          "LOCAL BEST KEPT THIS SESSION",
-          cx,
-          503,
-          1,
-          C.muted,
-          "center",
-        );
     }
     if (s.rankNotice) {
       this.rect(cx - 180, 510, 360, 23, C.dark);

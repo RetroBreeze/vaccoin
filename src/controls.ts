@@ -78,7 +78,11 @@ export class TouchInput {
         const radius = Math.max(48, Math.hypot(dx, dy));
         this.moveX = dx / radius;
         this.moveY = -dy / radius;
-      } else if (action === "look") {
+      } else if (
+        action === "look" ||
+        action === "vacuum" ||
+        action === "jump"
+      ) {
         this.dx += dx;
         this.dy += dy;
         pointer.x = x;

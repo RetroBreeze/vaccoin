@@ -104,3 +104,23 @@ it("reports ownership on release so rejected extra fingers cannot clear held sty
   expect(input.end(1)).toBe(true);
   expect(input.vacuum).toBe(false);
 });
+
+it.each(["vacuum", "jump"] as const)(
+  "aims while holding %s without dropping or repeating the action",
+  (action) => {
+    const input = new TouchInput();
+    input.begin(action, 1, 700, 300);
+    expect(input.consumeJump()).toBe(action === "jump");
+    input.move(1, 600, 200);
+    expect(input.consumeLook()).toEqual([-100, -100]);
+    expect(input.vacuum).toBe(action === "vacuum");
+    expect(input.consumeJump()).toBe(false);
+    input.move(1, 620, 190);
+    expect(input.consumeLook()).toEqual([20, -10]);
+    expect(input.vacuum).toBe(action === "vacuum");
+    input.end(1);
+    input.move(1, 650, 150);
+    expect(input.consumeLook()).toEqual([0, 0]);
+    expect(input.vacuum).toBe(false);
+  },
+);

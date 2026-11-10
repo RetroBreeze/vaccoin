@@ -77,6 +77,38 @@ try {
     touchPoints: [],
   });
   await mobile.waitForFunction(() => !window.vaccoinQA.snapshot().vacuumHeld);
+  // Captured action fingers keep aiming and holding their action outside the button.
+  for (const [id, dx] of [
+    ["#touch-vacuum", -130],
+    ["#touch-jump", 70],
+  ]) {
+    const point = await centre(mobile, id);
+    const start = await snapshot(mobile);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ ...point, id: 4 }],
+    });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: point.x + dx, y: point.y - 90, id: 4 }],
+    });
+    await mobile.waitForFunction(
+      ({ yaw, pitch }) => {
+        const state = window.vaccoinQA.snapshot();
+        return Math.abs(state.yaw - yaw) > 0.05 && state.pitch > pitch + 0.05;
+      },
+      { yaw: start.yaw, pitch: start.pitch },
+    );
+    assert.equal(await mobile.locator(id).getAttribute("data-held"), "true");
+    if (id === "#touch-vacuum")
+      assert.equal((await snapshot(mobile)).vacuumHeld, true);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    assert.equal(await mobile.locator(id).getAttribute("data-held"), null);
+    await mobile.waitForFunction(() => !window.vaccoinQA.snapshot().vacuumHeld);
+  }
   await mobile.getByRole("button", { name: "Jump", exact: true }).tap();
   await mobile.waitForFunction(
     () => window.vaccoinQA.snapshot().position[1] > 0.2,
@@ -118,7 +150,7 @@ try {
   assert.equal((await snapshot(mobile)).locked, false);
   await context.close();
   console.log(
-    "PASS: mobile play without pointer lock/fullscreen support, simultaneous move/look/vacuum, cancellation, jump, pause, portrait fallback and resume",
+    "PASS: mobile play without pointer lock/fullscreen support, simultaneous move/look/vacuum, aiming while holding VAC/JUMP outside their bounds, cancellation, jump, pause, portrait fallback and resume",
   );
 
   const page = await browser.newPage({

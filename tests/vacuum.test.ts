@@ -22,3 +22,9 @@ it("keeps the collection point reachable when the visible nozzle crosses a ramp"
     ),
   ).toBe(false);
 });
+it('cosmetics only change materials, preserving geometry, transforms and collection target',()=>{
+ const a=new Vacuum(new PerspectiveCamera()),b=new Vacuum(new PerspectiveCamera());
+ b.equip('gold');a.update(1/60,1,true,10,12);b.update(1/60,1,true,10,12);
+ expect(b.target.toArray()).toEqual(a.target.toArray());expect(b.group.position.toArray()).toEqual(a.group.position.toArray());expect(b.group.scale.toArray()).toEqual(a.group.scale.toArray());
+ expect(b.group.children.map(c=>c.position.toArray())).toEqual(a.group.children.map(c=>c.position.toArray()));expect(b.cosmetic).toBe('gold');
+});

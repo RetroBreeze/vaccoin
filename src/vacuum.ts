@@ -1,3 +1,4 @@
+import { COSMETICS } from './workshop-state';
 import * as T from "three";
 import { lineBlocked } from "./terrain";
 export class Vacuum {
@@ -6,12 +7,15 @@ export class Vacuum {
   private fan = new T.Group();
   private glow: T.Mesh;
   private power = 0;
+  private materials: T.MeshLambertMaterial[] = [];
+  cosmetic = "default";
   private eye = new T.Vector3();
   constructor(private camera: T.Camera) {
     const mint = new T.MeshLambertMaterial({ color: 0x5fe0bd }),
       dark = new T.MeshLambertMaterial({ color: 0x1b3544 }),
       cream = new T.MeshLambertMaterial({ color: 0xffe2ad }),
       orange = new T.MeshLambertMaterial({ color: 0xf3a65a });
+    this.materials = [mint, cream, dark, orange];
     const part = (
       g: T.BufferGeometry,
       m: T.Material,
@@ -64,6 +68,13 @@ export class Vacuum {
     this.group.rotation.y = -0.08;
     this.group.traverse((object) => object.layers.set(1));
     camera.add(this.group);
+  }
+  equip(id: string) {
+    if (id === this.cosmetic) return;
+    const item = COSMETICS.find(c => c.id === id);
+    if (!item) return;
+    this.cosmetic = id;
+    [item.body, item.trim, item.dark, item.accent].forEach((color,i) => this.materials[i].color.setHex(color));
   }
   update(
     dt: number,

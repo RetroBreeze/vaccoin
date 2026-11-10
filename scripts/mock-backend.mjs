@@ -9,6 +9,7 @@ export async function mockBackend(
   let name = "Mara",
     best = 0;
   const submissions = new Map();
+  const saves = new Map(), saveOperations = new Map();
   const calls = { signups: 0, profiles: 0, submissions: [], mine: 0, top: 0 };
   const sockets = [];
   calls.broadcast = () => {
@@ -17,6 +18,8 @@ export async function mockBackend(
       socket.send(JSON.stringify(array ? [join_ref,null,topic,"broadcast",payload] : {topic,event:"broadcast",payload,ref:null}));
     }
   };
+  calls.saves = saves;
+  calls.saveOffline = false;
   calls.liveScore = 19000;
   calls.mineRank = null;
   calls.disconnect = () => { for (const {socket} of sockets.splice(0)) socket.close({code:1011,reason:"Test reconnect"}); };
@@ -89,6 +92,18 @@ export async function mockBackend(
       });
     }
     if (url.pathname.endsWith("/user")) return json(user);
+    if (url.pathname.includes('/supagame/v1/saves')) {
+      if (calls.saveOffline) return route.abort('internetdisconnected');
+      const slot = url.pathname.split('/').at(-1);
+      if (slot === 'saves') return json({slots:[...saves.values()]});
+      if (request.method() === 'GET') return saves.has(slot) ? json({save:saves.get(slot)}) : json({code:'SAVE_NOT_FOUND',message:'Missing'},404);
+      const body = request.postDataJSON();
+      if (saveOperations.has(body.operationId)) return json({save:saveOperations.get(body.operationId)});
+      const old=saves.get(slot);
+      if (body.expectedRevision !== (old?.revision ?? 0)) return json({code:'SAVE_CONFLICT',message:'Changed',current:old??null},409);
+      const save={slot,revision:(old?.revision??0)+1,schemaVersion:body.schemaVersion,kind:'json',data:body.data,metadata:body.metadata,sizeBytes:JSON.stringify(body.data).length,deleted:false,objectPath:null,createdAt:old?.createdAt??new Date().toISOString(),updatedAt:new Date().toISOString()};
+      saves.set(slot,save);saveOperations.set(body.operationId,save);return json({save});
+    }
     if (url.pathname.endsWith("/players/me")) {
       if (request.method() === "PATCH") {
         name = request.postDataJSON().displayName;

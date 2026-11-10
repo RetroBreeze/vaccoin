@@ -11,9 +11,9 @@ export function titleLayout(w: number) {
     nameY: stacked ? 120 : 250,
     menuY: stacked ? 191 : 326,
     boardX: stacked ? 24 : Math.round(w * 0.51),
-    boardY: stacked ? 284 : 54,
+    boardY: stacked ? 344 : 54,
     boardW: stacked ? w - 48 : Math.round(w * 0.49) - 36,
-    boardH: stacked ? 226 : 430,
+    boardH: stacked ? 166 : 430,
   };
 }
 

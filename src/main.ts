@@ -1,3 +1,6 @@
+import { Workshop, type WorkshopRecord } from './workshop';
+import { WorkshopUI } from './workshop-ui';
+import { createIndexedDbStore } from '@supagame/sdk-ts/browser';
 import { titleLayout } from "./title-screen";
 import "./style.css";
 import { Vector3 } from "three";
@@ -14,7 +17,7 @@ import { Effects } from "./effects";
 import { AudioEngine } from "./audio";
 import { Round } from "./round";
 import { Leaderboard } from "./supagame";
-import { configuredGameServices } from "./game-services";
+import { configuredGameConnection } from "./game-services";
 import { UI, UIState } from "./ui";
 import { DisplayName } from "./display-name";
 import { PlayIntent } from "./input";
@@ -110,12 +113,24 @@ async function boot() {
   const shape = assets.coin(),
     coins = new Coins(shape.geometry, shape.material);
   view.scene.add(coins.mesh);
+  const connection = configuredGameConnection();
+  const identityKey = `vaccoin.workshop.identity:${connection?.namespace ?? 'local'}`;
+  let activePlayer: string | null = null;
+  try { activePlayer = localStorage.getItem(identityKey); } catch { /* Optional local identity hint, never an authorization token. */ }
+  const rememberPlayer = (id: string | null) => {
+    activePlayer = id;
+    try { if (id) localStorage.setItem(identityKey, id); else localStorage.removeItem(identityKey); } catch { /* IndexedDB still reports its own persistence failures. */ }
+  };
+  connection?.supabase.auth.onAuthStateChange((event, session) => {
+    if (session) rememberPlayer(session.user.id);
+    else if (event === 'SIGNED_OUT') rememberPlayer(null);
+  });
   const player = new Player(),
     vacuum = new Vacuum(view.camera),
     effects = new Effects(view.scene, view.camera),
     audio = new AudioEngine(),
     round = new Round(),
-    leaderboard = new Leaderboard(undefined, configuredGameServices()),
+    leaderboard = new Leaderboard(undefined, connection?.game),
     ui = new UI(
       uiCanvas,
       button,
@@ -123,6 +138,48 @@ async function boot() {
       retryButton,
       leaderboardControls,
     );
+  const workshop = new Workshop({
+    saves: connection?.game.saves,
+    store: createIndexedDbStore<WorkshopRecord>('vaccoin-workshop-v1'),
+    namespace: connection?.namespace ?? 'local-vaccoin',
+    identity: async () => {
+      if (!connection) return null;
+      if (!navigator.onLine) return activePlayer;
+      let timeout: ReturnType<typeof setTimeout>;
+      try {
+        const result = await Promise.race([
+          connection.supabase.auth.getSession(),
+          new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('Auth temporarily unavailable')), 2000); }),
+        ]);
+        if (result.data.session) rememberPlayer(result.data.session.user.id);
+        else if (!result.error) rememberPlayer(null);
+      } catch { /* A cached authenticated identity can read its own local state offline. */ }
+      finally { clearTimeout(timeout!); }
+      return activePlayer;
+    },
+  });
+  const workshopUI = new WorkshopUI(ui, workshop, open => {
+    if (open) { leaderboardOpen = false; achievementsOpen = false; pauseControls(); }
+  });
+  let runOwner: string | null = null;
+  const prepareWorkshop = async () => {
+    if (connection && navigator.onLine) {
+      let timeout: ReturnType<typeof setTimeout>;
+      try { await Promise.race([(async () => {
+        const existing = await connection.supabase.auth.getSession();
+        if (existing.error) throw existing.error;
+        rememberPlayer(existing.data.session?.user.id ?? null);
+        if (!activePlayer) rememberPlayer((await connection.game.players.ensureAnonymousSession()).userId);
+      })(), new Promise<void>(resolve => { timeout = setTimeout(resolve, 3000); })]);
+      } catch { /* Existing cached sessions are never replaced after an Auth failure. */ } finally { clearTimeout(timeout!); }
+    }
+    await workshop.initialize();
+    audio.setMuted(workshop.progress.preferences.muted);
+  };
+  void prepareWorkshop();
+  window.addEventListener('online', () => void workshop.sync());
+  window.addEventListener('focus', () => void workshop.sync());
+  setInterval(() => { if (!document.hidden) void workshop.sync(); }, 30000);
   const browse = (mode: "top" | "around") =>
     void leaderboard.browse(mode, !!profile.name);
   function closeLeaderboard() {
@@ -226,6 +283,7 @@ async function boot() {
   }
   function startRound() {
     round.start(performance.now());
+    runOwner = workshop.owner;
     player.reset();
     coins.reset();
     destructibles.reset();
@@ -253,7 +311,7 @@ async function boot() {
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
-    if (leaderboardOpen || achievementsOpen) return;
+    if (leaderboardOpen || achievementsOpen || workshopUI.open) return;
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -302,6 +360,7 @@ async function boot() {
   soundButton.addEventListener("click", () => {
     void audio.unlock();
     audio.setMuted(!audio.muted);
+    void workshop.mute(audio.muted);
   });
   document.addEventListener("pointerlockchange", () => {
     locked = document.pointerLockElement === canvas;
@@ -338,6 +397,7 @@ async function boot() {
       (e.code === "Enter" || e.code === "Space")
     )
       return;
+    if (workshopUI.open) { if (e.code === 'Escape') workshopUI.setOpen(false); return; }
     if (achievementsOpen) { if (e.code === 'Escape') { achievementsOpen = false; achievementsButton.focus(); } return; }
     if (leaderboardOpen) {
       if (e.code === "Escape") {
@@ -372,7 +432,7 @@ async function boot() {
       void toggleFullscreen();
     }
     if (e.code === "Escape") pauseControls();
-    if (e.code === "KeyM" && !e.repeat) audio.setMuted(!audio.muted);
+    if (e.code === "KeyM" && !e.repeat) { audio.setMuted(!audio.muted); void workshop.mute(audio.muted); }
     if (e.code === "KeyR" && !e.repeat) {
       if (controlsActive()) startRound();
       else void play(true);
@@ -388,6 +448,7 @@ async function boot() {
     audio.finish();
     const run = { id: round.id, score: round.score, durationMs: 60000 };
     void leaderboard.complete(run);
+    void workshop.complete(run, runOwner);
     status.textContent = `Round complete. ${round.score} coins collected. Play again.`;
   }
   document.addEventListener("visibilitychange", () => {
@@ -499,6 +560,7 @@ async function boot() {
     audio.motorUpdate(sucking, rate);
     coins.flush();
     effects.update(elapsed, now / 1000, sucking);
+    vacuum.equip(workshop.progress.equipped);
     vacuum.group.visible = round.phase !== "title";
     if (round.phase === "title") {
       const t = now * 0.00007;
@@ -518,7 +580,8 @@ async function boot() {
       namePanel.style.top = `${(layout.nameY / 540) * 100}%`;
       namePanel.style.width = `${(256 / ui.w) * 100}%`;
     }
-    namePanel.hidden = round.phase !== "title" || !!profile.name || leaderboardOpen || achievementsOpen;
+    const titleVisible = round.phase === "title" && !leaderboardOpen && !achievementsOpen && !workshopUI.open;
+    namePanel.hidden = !titleVisible || !!profile.name;
     uiState.liveEntries = leaderboard.liveEntries;
     uiState.liveStatus = leaderboard.liveStatus;
     uiState.rankNotice =
@@ -561,12 +624,18 @@ async function boot() {
     view.draw();
     ui.draw(uiState, elapsed);
     ui.drawAchievements(uiState, achievementsButton);
+    if (workshopUI.open) {
+      for (const b of [button, retryButton, achievementsButton, ...Object.values(leaderboardControls)]) b.style.display = 'none';
+    }
+    workshopUI.draw(titleVisible, round.phase === 'results');
+
   }
   // Deliberately dev-only QA hooks; stripped out of the production build.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("qa")) {
     Object.assign(window, {
       vaccoinQA: {
         snapshot: () => ({
+          workshop: {open:workshopUI.open,progress:workshop.progress,status:workshop.status,ready:workshop.ready,cosmetic:vacuum.cosmetic},
           achievements: {open: achievementsOpen, rows: leaderboard.achievements.rows, notice:leaderboard.achievements.queue?.current ?? null},
           live: {
             entries: leaderboard.liveEntries,
@@ -613,6 +682,13 @@ async function boot() {
           player.yaw = yaw;
           player.pitch = pitch;
           cameraToPlayer();
+        },
+        title: () => { round.phase = 'title'; pauseControls(); },
+        workshopSync: () => workshop.sync(),
+        workshopRun: (coins: number) => {
+          round.collect(coins);
+          round.startedAt = performance.now() - 60001;
+          finishIfExpired();
         },
         expire: () => {
           round.startedAt = performance.now() - 60001;

@@ -1,3 +1,4 @@
+import { createOperationId } from '@supagame/sdk-ts';
 export type Phase = "title" | "playing" | "results";
 export class Round {
   phase: Phase = "title";
@@ -10,7 +11,7 @@ export class Round {
     this.score = 0;
     this.destroyed = 0;
     this.startedAt = now;
-    this.id = globalThis.crypto?.randomUUID?.() ?? `local-${now}`;
+    this.id = createOperationId();
   }
   remaining(now: number) {
     return Math.max(0, 60 - (now - this.startedAt) / 1000);

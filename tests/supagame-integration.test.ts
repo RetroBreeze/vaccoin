@@ -19,6 +19,7 @@ const entry: LeaderboardEntry = {
 };
 function fixture() {
   const game = {
+    saves: { save:vi.fn(), load:vi.fn(), list:vi.fn(), delete:vi.fn(), saveBinary:vi.fn(), loadBinary:vi.fn(), abortBinary:vi.fn(), cleanup:vi.fn() },
     achievements: {
       listAchievements: vi.fn(async () => []),
       getPlayerAchievements: vi.fn(async () => []),

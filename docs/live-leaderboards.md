@@ -21,6 +21,8 @@ needed. The CLI tarball now uses this durable sibling path instead of `/tmp`.
 Use Node 24 and Supabase CLI 3.0.0. In `~/Projects/vaccoin`:
 
 ```sh
+npm install --save-dev --save-exact supabase@3.0.0 ../supagame/artifacts/supagame-cli-0.1.0.tgz
+npx --no-install supagame init --project-ref ttwppnsnxcighfcesxhf --origin http://localhost:5173 --origin http://10.0.0.15:5173
 npx --no-install supagame add live-leaderboards --dry-run
 npx --no-install supagame add live-leaderboards
 npx --no-install supagame doctor
@@ -31,11 +33,17 @@ Review and commit the staged migration and module manifest together with the
 existing Supabase installation files. Those files were already untracked before
 this feature pass and were not adopted into its Git commit.
 
-In that project's dashboard verify Realtime is enabled and private database
-Broadcast is available. Review existing Realtime policies; broad permissive
-receive policies combine with OR. Supabase recommends disabling public channel
-access, but first check whether other project features need it. No hosted setting
-has been changed by this implementation.
+The updated CLI previews and manages anonymous Auth and browser origins, checks
+Realtime database prerequisites, and stages the module's triggers/private-channel
+policies. It preserves global Realtime settings and unrelated project configuration.
+No hosted setting has been changed by this implementation.
+
+Read-only validation on 10 November 2026 found Core and Leaderboards deployed,
+with Live Leaderboards still pending. In disposable staging, the two origins above
+matched the hosted origin digest and exactly one module migration was pending.
+Doctor correctly reports missing live objects until deployment, and distinguishes
+unverified hosted service/WebSocket health from database prerequisites. A function
+redeploy is proposed when the previous receipt cannot prove the current code matches.
 
 After reviewing **all** pending migrations and the exact project reference, run:
 

@@ -3,6 +3,8 @@ import { Phase } from "./round";
 import { Standing } from "./supagame";
 export interface UIState {
   phase: Phase;
+  controlHint?: string;
+  mobile?: boolean;
   score: number;
   remaining: number;
   best: number;
@@ -127,9 +129,12 @@ export class UI {
       }
     } else if (s.phase === "title") {
       this.rect(0, 0, w, 540, "#10283766");
-      this.text("VACCOIN", cx + 5, 161, 10, "#493f35", "center");
-      this.text("VACCOIN", cx, 155, 10, C.gold, "center");
+      const titleY = s.mobile ? 115 : 155;
+      this.text("VACCOIN", cx + 5, titleY + 6, 10, "#493f35", "center");
+      this.text("VACCOIN", cx, titleY, 10, C.gold, "center");
       this.playButton("PLAY", cx - 128, 302, 256);
+      if (s.controlHint)
+        this.text(s.controlHint, cx, 418, 1, C.muted, "center");
     } else {
       this.rect(0, 0, w, 540, "#0b2036bd");
       this.text(s.score.toLocaleString("en-US"), cx, 45, 8, C.gold, "center");

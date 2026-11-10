@@ -17,6 +17,9 @@ import { configuredGameServices } from "./game-services";
 import { UI, UIState } from "./ui";
 import { DisplayName } from "./display-name";
 import { PlayIntent } from "./input";
+import { GamepadControls } from "./controls";
+import { TouchControls } from "./touch-controls";
+import { ImmersiveDisplay } from "./immersive";
 
 async function boot() {
   const canvas = document.querySelector<HTMLCanvasElement>("#world")!,
@@ -32,6 +35,51 @@ async function boot() {
   retryButton.setAttribute("aria-label", "Retry leaderboard connection");
   retryButton.style.display = "none";
   button.after(retryButton);
+  const fullscreenButton =
+    document.querySelector<HTMLButtonElement>("#fullscreen")!;
+  const pauseButton = document.querySelector<HTMLButtonElement>("#pause")!;
+  const rotatePrompt = document.querySelector<HTMLElement>("#rotate-device")!;
+  const displayMessage =
+    document.querySelector<HTMLElement>("#display-message")!;
+  const mobile = matchMedia("(pointer: coarse)").matches;
+  const immersive = new ImmersiveDisplay(mobile);
+  const touch = new TouchControls(
+    document.querySelector<HTMLElement>("#touch-controls")!,
+  );
+  const gamepads = new GamepadControls();
+  let pad = gamepads.poll([]);
+  let controlMode: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse";
+  let portableActive = false;
+  const portrait = () => mobile && innerHeight > innerWidth;
+  const controlsActive = () =>
+    !document.hidden && !portrait() && (locked || portableActive);
+  async function toggleFullscreen() {
+    const ok = await immersive.toggle();
+    displayMessage.hidden = ok;
+    displayMessage.textContent = ok
+      ? ""
+      : "Fullscreen unavailable. You can still play in this browser.";
+  }
+  fullscreenButton.addEventListener("click", () => void toggleFullscreen());
+  document
+    .querySelector("#rotate-fullscreen")!
+    .addEventListener("click", () => void immersive.enter());
+  document.addEventListener("fullscreenchange", () => {
+    const active = !!document.fullscreenElement;
+    fullscreenButton.textContent = active ? "][" : "[ ]";
+    fullscreenButton.setAttribute(
+      "aria-label",
+      active ? "Exit fullscreen" : "Enter fullscreen",
+    );
+    fullscreenButton.setAttribute("aria-pressed", String(active));
+    if (!active) {
+      try {
+        screen.orientation?.unlock?.();
+      } catch {
+        /* Optional browser API. */
+      }
+    }
+  });
   const profile = new DisplayName();
   nameInput.value = profile.name;
   namePanel.hidden = !!profile.name;
@@ -67,6 +115,7 @@ async function boot() {
     direction = new Vector3();
   let mouseDown = false,
     locked = false,
+    vacuumHeld = false,
     last = performance.now(),
     accumulator = 0,
     rate = 0,
@@ -77,6 +126,7 @@ async function boot() {
     ignoreNextLook = false;
   const uiState: UIState = {
     phase: "title",
+    mobile,
     score: 0,
     remaining: 60,
     best: leaderboard.best,
@@ -100,8 +150,16 @@ async function boot() {
   function stopInput() {
     keys.clear();
     mouseDown = false;
+    vacuumHeld = false;
+    touch.clear();
     audio.motorUpdate(false, 0);
   }
+  function pauseControls() {
+    portableActive = false;
+    stopInput();
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  pauseButton.addEventListener("click", pauseControls);
   function cameraToPlayer() {
     view.camera.position.copy(player.position);
     view.camera.position.y += 1.7;
@@ -135,7 +193,10 @@ async function boot() {
     error = "";
     requesting = false;
   }
-  async function play(restart = false) {
+  async function play(
+    restart = false,
+    source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
+  ) {
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -149,6 +210,17 @@ async function boot() {
       nameInput.value = profile.name;
       namePanel.hidden = true;
       void leaderboard.connect(profile.name);
+    }
+    nameInput.blur();
+    controlMode = source;
+    if (source !== "mouse") {
+      intent.cancel();
+      if (restart || round.phase !== "playing") startRound();
+      portableActive = true;
+      error = "";
+      void audio.unlock();
+      if (source === "touch") void immersive.enter();
+      return;
     }
     requesting = true;
     intent.request(restart);
@@ -168,7 +240,7 @@ async function boot() {
   }
   button.addEventListener("click", () => void play());
   canvas.addEventListener("click", () => {
-    if (!locked && round.phase === "playing") void play();
+    if (!controlsActive() && round.phase === "playing") void play();
   });
   soundButton.addEventListener("click", () => {
     void audio.unlock();
@@ -176,8 +248,10 @@ async function boot() {
   });
   document.addEventListener("pointerlockchange", () => {
     locked = document.pointerLockElement === canvas;
-    if (!locked) stopInput();
-    else captureAcquired();
+    if (!locked) {
+      stopInput();
+      if (controlMode === "mouse") portableActive = false;
+    } else captureAcquired();
   });
   document.addEventListener("pointerlockerror", () => {
     intent.cancel();
@@ -222,30 +296,31 @@ async function boot() {
       ].includes(e.code)
     )
       e.preventDefault();
+    if (e.code === "KeyF" && !e.repeat) {
+      e.preventDefault();
+      void toggleFullscreen();
+    }
+    if (e.code === "Escape") pauseControls();
     if (e.code === "KeyM" && !e.repeat) audio.setMuted(!audio.muted);
     if (e.code === "KeyR" && !e.repeat) {
-      if (locked) startRound();
+      if (controlsActive()) startRound();
       else void play(true);
     }
     if (e.code === "Enter" && !e.repeat && !locked) void play();
-    if (locked) keys.add(e.code);
+    if (controlsActive()) keys.add(e.code);
   });
   document.addEventListener("keyup", (e) => keys.delete(e.code));
-  window.addEventListener("blur", () => {
-    stopInput();
-    if (document.pointerLockElement) document.exitPointerLock();
-  });
+  window.addEventListener("blur", pauseControls);
   function finishIfExpired() {
     if (!round.tick(performance.now())) return;
-    stopInput();
-    if (document.pointerLockElement) document.exitPointerLock();
+    pauseControls();
     audio.finish();
     const run = { id: round.id, score: round.score, durationMs: 60000 };
     void leaderboard.complete(run);
     status.textContent = `Round complete. ${round.score} coins collected. Play again.`;
   }
   document.addEventListener("visibilitychange", () => {
-    stopInput();
+    if (document.hidden) pauseControls();
     finishIfExpired();
   });
   setInterval(finishIfExpired, 250);
@@ -256,8 +331,14 @@ async function boot() {
   function simulate(dt: number) {
     player.update(
       dt,
-      Number(keys.has("KeyD")) - Number(keys.has("KeyA")),
-      Number(keys.has("KeyW")) - Number(keys.has("KeyS")),
+      Number(keys.has("KeyD")) -
+        Number(keys.has("KeyA")) +
+        touch.input.moveX +
+        pad.moveX,
+      Number(keys.has("KeyW")) -
+        Number(keys.has("KeyS")) +
+        touch.input.moveY +
+        pad.moveY,
       keys.has("Space"),
     );
     keys.delete("Space");
@@ -266,16 +347,16 @@ async function boot() {
       audio.tone(540, 0.18, 0.09, "sine", 0.06);
     }
     cameraToPlayer();
-    vacuum.update(dt, performance.now() / 1000, mouseDown, player.speed, rate);
+    vacuum.update(dt, performance.now() / 1000, vacuumHeld, player.speed, rate);
     round.destroyed += destructibles.update(
       dt,
       performance.now() / 1000,
       player,
       eye,
       direction,
-      mouseDown,
+      vacuumHeld,
     );
-    gainedFrame += coins.update(dt, eye, direction, vacuum.target, mouseDown);
+    gainedFrame += coins.update(dt, eye, direction, vacuum.target, vacuumHeld);
   }
   let frames = 0,
     totalFrameMs = 0,
@@ -286,8 +367,38 @@ async function boot() {
     const raw = now - last;
     last = now;
     finishIfExpired();
+    let pads: (Gamepad | null)[] = [];
+    try {
+      pads = Array.from(navigator.getGamepads?.() ?? []);
+    } catch {
+      /* Gamepad API may be denied. */
+    }
+    const wasConnected = pad.connected;
+    pad = gamepads.poll(pads);
+    if (wasConnected && !pad.connected && controlMode === "gamepad")
+      pauseControls();
+    const menuAction = pad.menu || (pad.confirm && round.phase !== "playing");
+    if (menuAction && !document.hidden && document.hasFocus()) {
+      if (round.phase === "playing" && controlsActive()) pauseControls();
+      else void play(false, "gamepad");
+    }
+    rotatePrompt.hidden = !portrait();
+    if (portrait() && (portableActive || locked)) pauseControls();
+    const active = round.phase === "playing" && controlsActive();
+    pauseButton.hidden = round.phase !== "playing" || !active;
+    touch.show(active && mobile);
+    if (active) {
+      const [dx, dy] = touch.input.consumeLook();
+      player.look(
+        dx * (540 / innerHeight) + pad.lookX * elapsed * 900,
+        dy * (540 / innerHeight) + pad.lookY * elapsed * 900,
+      );
+      if (touch.input.consumeJump() || (!menuAction && pad.jump))
+        keys.add("Space");
+    }
+    vacuumHeld = active && (mouseDown || touch.input.vacuum || pad.vacuum);
     gainedFrame = 0;
-    if (round.phase === "playing" && locked && !document.hidden) {
+    if (active) {
       accumulator = Math.min(accumulator + elapsed, 0.1);
       while (accumulator >= 1 / 120) {
         simulate(1 / 120);
@@ -312,7 +423,7 @@ async function boot() {
       accumulator = 0;
       rate *= Math.exp(-5 * elapsed);
     }
-    const sucking = round.phase === "playing" && locked && mouseDown;
+    const sucking = vacuumHeld;
     audio.motorUpdate(sucking, rate);
     coins.flush();
     effects.update(elapsed, now / 1000, sucking);
@@ -334,7 +445,12 @@ async function boot() {
     uiState.remaining = round.phase === "playing" ? round.remaining(now) : 60;
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
-    uiState.locked = locked;
+    uiState.locked = controlsActive();
+    uiState.controlHint = mobile
+      ? "LEFT MOVE / RIGHT LOOK / HOLD VAC"
+      : pad.connected
+        ? "STICKS MOVE + LOOK / A JUMP / RT VAC / START PAUSE"
+        : "WASD MOVE / MOUSE LOOK / CLICK VAC / SPACE JUMP / F FULLSCREEN";
     uiState.time =
       round.phase === "playing" ? (now - round.startedAt) / 1000 : now / 1000;
     uiState.muted = audio.muted;
@@ -365,6 +481,12 @@ async function boot() {
           position: player.position.toArray(),
           velocity: player.velocity.toArray(),
           locked,
+          controlsActive: controlsActive(),
+          controlMode,
+          yaw: player.yaw,
+          pitch: player.pitch,
+          vacuumHeld,
+          gamepadConnected: pad.connected,
           destroyed: round.destroyed,
           drawCalls: view.renderer.info.render.calls,
           triangles: view.renderer.info.render.triangles,

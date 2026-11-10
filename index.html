@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <meta name="theme-color" content="#142a36" />
     <meta
       name="description"
@@ -15,6 +18,41 @@
     ><canvas id="ui" aria-label="Vaccoin game interface"></canvas
     ><button id="play" aria-label="Play Vaccoin">Play</button
     ><button id="sound" aria-label="Mute sound">Sound</button>
+    <button
+      id="fullscreen"
+      class="utility"
+      aria-label="Enter fullscreen"
+      title="Fullscreen (F)"
+    >
+      [ ]
+    </button>
+    <button
+      id="pause"
+      class="utility"
+      aria-label="Pause controls"
+      title="Pause controls"
+      hidden
+    >
+      II
+    </button>
+    <p id="display-message" role="status" hidden></p>
+    <div id="rotate-device" role="status" hidden>
+      <strong>ROTATE TO PLAY</strong>
+      <span>Turn your device to landscape</span>
+      <button id="rotate-fullscreen">TRY LANDSCAPE FULLSCREEN</button>
+    </div>
+    <div id="touch-controls" hidden aria-label="Touch game controls">
+      <div id="touch-look" data-touch="look" aria-label="Drag to look">
+        <span>LOOK</span>
+      </div>
+      <div id="touch-move" data-touch="move" aria-label="Drag to move">
+        <span class="stick"></span><span class="touch-label">MOVE</span>
+      </div>
+      <button id="touch-jump" data-touch="jump" aria-label="Jump">JUMP</button>
+      <button id="touch-vacuum" data-touch="vacuum" aria-label="Hold to vacuum">
+        VAC
+      </button>
+    </div>
     <div id="player-name" hidden>
       <label for="display-name">DISPLAY NAME</label>
       <input

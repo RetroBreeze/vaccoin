@@ -13,7 +13,9 @@ import { Effects } from "./effects";
 import { AudioEngine } from "./audio";
 import { Round } from "./round";
 import { Leaderboard } from "./supagame";
+import { configuredGameServices } from "./game-services";
 import { UI, UIState } from "./ui";
+import { DisplayName } from "./display-name";
 import { PlayIntent } from "./input";
 
 async function boot() {
@@ -22,6 +24,18 @@ async function boot() {
     button = document.querySelector<HTMLButtonElement>("#play")!,
     soundButton = document.querySelector<HTMLButtonElement>("#sound")!,
     status = document.querySelector<HTMLParagraphElement>("#status")!;
+  const namePanel = document.querySelector<HTMLDivElement>("#player-name")!;
+  const nameInput = document.querySelector<HTMLInputElement>("#display-name")!;
+  const retryButton = button.cloneNode(false) as HTMLButtonElement;
+  retryButton.id = "retry-leaderboard";
+  retryButton.textContent = "RETRY ONLINE";
+  retryButton.setAttribute("aria-label", "Retry leaderboard connection");
+  retryButton.style.display = "none";
+  button.after(retryButton);
+  const profile = new DisplayName();
+  nameInput.value = profile.name;
+  namePanel.hidden = !!profile.name;
+  nameInput.addEventListener("input", () => nameInput.setCustomValidity(""));
   const view = new Rendering(canvas),
     assets = new Assets();
   await assets.load();
@@ -34,8 +48,9 @@ async function boot() {
     effects = new Effects(view.scene, view.camera),
     audio = new AudioEngine(),
     round = new Round(),
-    leaderboard = new Leaderboard(),
-    ui = new UI(uiCanvas, button, soundButton);
+    leaderboard = new Leaderboard(undefined, configuredGameServices()),
+    ui = new UI(uiCanvas, button, soundButton, retryButton);
+  retryButton.addEventListener("click", () => void leaderboard.retry());
   const destructibles = new Destructibles(
     view.scene,
     assets,
@@ -72,10 +87,16 @@ async function boot() {
     entries: [],
     error: "",
     persisted: leaderboard.persisted,
+    personalBest: null,
+    rank: null,
+    leaderboardStatus: leaderboard.status,
+    loading: false,
+    canRetry: false,
   };
   status.classList.add("hidden");
   status.textContent = "Ready. Play Vaccoin. Headphones recommended.";
-  void leaderboard.connect();
+  leaderboard.name = profile.name || "YOU";
+  if (profile.name) void leaderboard.connect(profile.name);
   function stopInput() {
     keys.clear();
     mouseDown = false;
@@ -116,6 +137,19 @@ async function boot() {
   }
   async function play(restart = false) {
     if (requesting) return;
+    if (!profile.name) {
+      if (!profile.save(nameInput.value)) {
+        nameInput.setCustomValidity(
+          "Enter a display name with 3–24 characters and no control characters.",
+        );
+        nameInput.reportValidity();
+        nameInput.focus();
+        return;
+      }
+      nameInput.value = profile.name;
+      namePanel.hidden = true;
+      void leaderboard.connect(profile.name);
+    }
     requesting = true;
     intent.request(restart);
     void audio.unlock();
@@ -168,6 +202,13 @@ async function boot() {
   });
   document.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement) {
+      if (e.code === "Enter" && !e.repeat) {
+        e.preventDefault();
+        void play();
+      }
+      return;
+    }
     if (
       [
         "KeyW",
@@ -300,6 +341,11 @@ async function boot() {
     uiState.entries = leaderboard.entries;
     uiState.error = error;
     uiState.persisted = leaderboard.persisted;
+    uiState.personalBest = leaderboard.personalBest;
+    uiState.rank = leaderboard.rank;
+    uiState.leaderboardStatus = leaderboard.status;
+    uiState.loading = leaderboard.loading;
+    uiState.canRetry = leaderboard.canRetry;
     view.draw();
     ui.draw(uiState, elapsed);
   }
@@ -325,6 +371,9 @@ async function boot() {
           averageFrameMs: totalFrameMs / Math.max(1, frames),
           maxFrameMs,
           online: leaderboard.status,
+          personalBest: leaderboard.personalBest,
+          rank: leaderboard.rank,
+          entries: leaderboard.entries,
           muted: audio.muted,
         }),
         teleport: (x: number, y: number, z: number, yaw = 0, pitch = -0.12) => {

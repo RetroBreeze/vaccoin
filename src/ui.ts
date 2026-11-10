@@ -13,6 +13,11 @@ export interface UIState {
   entries: Standing[];
   error: string;
   persisted: boolean;
+  personalBest: number | null;
+  rank: number | null;
+  leaderboardStatus: string;
+  loading: boolean;
+  canRetry: boolean;
 }
 const C = {
   white: "#fff2d2",
@@ -31,6 +36,7 @@ export class UI {
     readonly canvas: HTMLCanvasElement,
     private button: HTMLButtonElement,
     private sound: HTMLButtonElement,
+    private retry: HTMLButtonElement,
   ) {
     this.ctx = canvas.getContext("2d")!;
     button.addEventListener("mouseenter", () => (this.hovered = true));
@@ -81,6 +87,7 @@ export class UI {
       cx = w / 2;
     c.clearRect(0, 0, w, 540);
     this.button.style.display = "none";
+    this.retry.style.display = "none";
     this.sound.style.display = s.phase === "playing" ? "none" : "block";
     this.sound.style.left = `${((w - 48) / w) * 100}%`;
     this.sound.setAttribute(
@@ -120,45 +127,86 @@ export class UI {
       }
     } else if (s.phase === "title") {
       this.rect(0, 0, w, 540, "#10283766");
-      this.text("VACCOIN", cx + 5, 186, 10, "#493f35", "center");
-      this.text("VACCOIN", cx, 180, 10, C.gold, "center");
+      this.text("VACCOIN", cx + 5, 161, 10, "#493f35", "center");
+      this.text("VACCOIN", cx, 155, 10, C.gold, "center");
       this.playButton("PLAY", cx - 128, 302, 256);
     } else {
       this.rect(0, 0, w, 540, "#0b2036bd");
-      this.text(s.score.toLocaleString("en-US"), cx, 158, 9, C.gold, "center");
+      this.text(s.score.toLocaleString("en-US"), cx, 45, 8, C.gold, "center");
       this.text(
-        "BEST " + s.best.toLocaleString("en-US"),
+        s.personalBest === null
+          ? "LOCAL BEST " + s.best.toLocaleString("en-US")
+          : "PERSONAL BEST " + s.personalBest.toLocaleString("en-US"),
         cx,
-        247,
+        119,
         2,
         C.white,
         "center",
       );
-      this.playButton("PLAY AGAIN", cx - 158, 300, 316);
+      this.text(
+        s.rank === null ? "RANK --" : "RANK " + s.rank,
+        cx,
+        144,
+        2,
+        C.muted,
+        "center",
+      );
+      this.playButton("PLAY AGAIN", cx - 158, 177, 316);
+      this.text("TOP 10 / MOST COINS", cx, 247, 2, C.mint, "center");
       if (s.entries.length) {
-        for (let i = 0; i < Math.min(3, s.entries.length); i++) {
+        for (let i = 0; i < Math.min(10, s.entries.length); i++) {
           const e = s.entries[i];
           this.text(
-            `${e.rank}. ${e.name.slice(0, 16)}`,
-            cx - 150,
-            380 + i * 19,
-            1,
+            `${e.rank}. ${Array.from(e.name).slice(0, 22).join("")}`,
+            cx - 230,
+            274 + i * 16,
+            2,
             C.muted,
           );
           this.text(
-            String(e.score),
-            cx + 150,
-            380 + i * 19,
-            1,
+            e.score.toLocaleString("en-US"),
+            cx + 230,
+            274 + i * 16,
+            2,
             C.gold,
             "right",
           );
         }
       } else {
-        this.text("LEADERBOARD OFFLINE", cx, 380, 1, C.muted, "center");
+        this.text(
+          s.loading
+            ? "LOADING LEADERBOARD"
+            : s.leaderboardStatus.includes("UNAVAILABLE")
+              ? "LEADERBOARD OFFLINE"
+              : "NO SCORES YET",
+          cx,
+          290,
+          2,
+          C.muted,
+          "center",
+        );
       }
-      if (!s.persisted)
-        this.text("BEST KEPT THIS SESSION", cx, 450, 1, C.muted, "center");
+      if (s.canRetry && !s.loading) {
+        this.rect(cx - 112, 446, 224, 28, C.dark);
+        this.text("RETRY ONLINE", cx, 455, 2, C.gold, "center");
+        Object.assign(this.retry.style, {
+          display: "block",
+          left: `${((cx - 112) / w) * 100}%`,
+          top: `${(446 / 540) * 100}%`,
+          width: `${(224 / w) * 100}%`,
+          height: `${(28 / 540) * 100}%`,
+        });
+      }
+      this.text(s.leaderboardStatus, cx, 487, 1, C.muted, "center");
+      if (!s.persisted && s.personalBest === null)
+        this.text(
+          "LOCAL BEST KEPT THIS SESSION",
+          cx,
+          503,
+          1,
+          C.muted,
+          "center",
+        );
     }
     if (s.phase !== "playing") {
       // A small speaker icon replaces the old sound-status lettering.

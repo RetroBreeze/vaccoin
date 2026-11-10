@@ -1,3 +1,4 @@
+import { mockBackend } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({
@@ -6,6 +7,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
+await mockBackend(page, { offline: true, savedName: true });
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.addInitScript(() => {
@@ -34,6 +36,8 @@ try {
   });
   await page.goto("http://127.0.0.1:5173/?qa");
   await page.waitForFunction(() => window.vaccoinQA);
+  await page.getByRole("textbox", { name: "DISPLAY NAME" }).fill("Mara");
+  await page.locator("#display-name").evaluate((input) => input.blur());
   await page.keyboard.press("m");
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(

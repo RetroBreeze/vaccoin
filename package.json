@@ -11,12 +11,17 @@
     "test:browser": "node scripts/browser-test.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "@supagame/contracts": "file:../supagame/artifacts/supagame-contracts-0.1.0.tgz",
+    "@supagame/sdk-ts": "file:../supagame/artifacts/supagame-sdk-ts-0.1.0.tgz",
     "three": "^0.180.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@supagame/cli": "file:../../../../tmp/supagame-cli-fix/supagame-cli-0.1.0.tgz",
     "@types/three": "^0.180.0",
     "prettier": "^3.9.10",
+    "supabase": "^3.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",
     "vitest": "^5.1.0"

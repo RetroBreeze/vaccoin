@@ -1,3 +1,4 @@
+import { mockBackend } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -11,6 +12,7 @@ try {
       viewport: { width: 1280, height: 720 },
     }),
     errors = [];
+  await mockBackend(page, { offline: true, savedName: true });
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("http://127.0.0.1:5173/?qa");
   await page.waitForFunction(() => window.vaccoinQA);

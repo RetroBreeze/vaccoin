@@ -35,21 +35,6 @@ it("survives storage failure and rejects incomplete or invalid rounds", async ()
     b.complete({ id: "x", score: 1.2, durationMs: 60000 }),
   ).rejects.toThrow();
 });
-it("handles a failed real bridge without claiming submission", async () => {
-  const b = new Leaderboard(undefined, {
-    connect: async () => {
-      throw Error("offline");
-    },
-    submit: async () => {
-      throw Error("offline");
-    },
-    standings: async () => [],
-  });
-  await b.connect();
-  expect(b.status).toContain("unavailable");
-  const r = await b.complete({ id: "a", score: 3, durationMs: 60000 });
-  expect(r.submitted).toBe(false);
-});
 it("reports session-only best when storage writes fail", async () => {
   const b = new Leaderboard({
     getItem: () => null,

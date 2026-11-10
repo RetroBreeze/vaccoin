@@ -1,3 +1,4 @@
+import { mockBackend } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({
@@ -10,9 +11,11 @@ try {
     }),
     errors = [],
     failed = [];
+  await mockBackend(page, { offline: true, savedName: true });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("response", (r) => {
-    if (r.status() >= 400) failed.push(r.url());
+    if (r.status() >= 400 && new URL(r.url()).hostname === "127.0.0.1")
+      failed.push(r.url());
   });
   await page.goto("http://127.0.0.1:4173/?qa");
   await page.getByRole("button", { name: "PLAY", exact: true }).waitFor();

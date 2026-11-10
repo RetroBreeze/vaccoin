@@ -1,3 +1,4 @@
+import { mockBackend } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -8,11 +9,13 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
+await mockBackend(page, { offline: true, savedName: true });
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.goto("http://127.0.0.1:5173/?qa");
   await page.waitForFunction(() => window.vaccoinQA);
   await page.keyboard.press("m");
+  const started = Date.now();
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(
     () => window.vaccoinQA.snapshot().phase === "playing",
@@ -30,7 +33,6 @@ try {
         });
     }).observe({ type: "longtask", buffered: true });
   });
-  const started = Date.now();
   await page.waitForTimeout(3000);
   const move = async (key, ms) => {
     await page.keyboard.down(key);

@@ -28,7 +28,8 @@ canvas {
   z-index: 1;
   pointer-events: none;
 }
-#play {
+#play,
+#retry-leaderboard {
   position: fixed;
   z-index: 2;
   background: transparent;
@@ -39,7 +40,8 @@ canvas {
   display: none;
   padding: 0;
 }
-#play:focus-visible {
+#play:focus-visible,
+#retry-leaderboard:focus-visible {
   outline: 3px solid #fff2d2;
   outline-offset: 6px;
 }
@@ -78,4 +80,43 @@ canvas {
 }
 ::selection {
   background: transparent;
+}
+
+#player-name {
+  position: fixed;
+  z-index: 3;
+  left: 50%;
+  top: 45%;
+  transform: translateX(-50%);
+  width: min(300px, 80vw);
+  color: #fff2d2;
+  font-size: clamp(10px, 1.7vh, 16px);
+}
+#player-name[hidden] {
+  display: none;
+}
+#player-name label,
+#name-help {
+  display: block;
+}
+#display-name {
+  width: 100%;
+  margin: 4px 0;
+  padding: 6px 10px;
+  border: 2px solid #96b6c2;
+  border-radius: 0;
+  background: #102837;
+  color: #fff2d2;
+  font: inherit;
+  font-size: clamp(14px, 2.5vh, 22px);
+}
+#display-name:focus {
+  outline: 2px solid #ffcf58;
+  outline-offset: 2px;
+}
+#name-help {
+  color: #96b6c2;
+}
+#display-name::selection {
+  background: #496477;
 }

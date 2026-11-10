@@ -1,3 +1,4 @@
+import { mockBackend } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -11,6 +12,7 @@ try {
       viewport: { width: 1280, height: 720 },
     }),
     errors = [];
+  await mockBackend(page, { offline: true, savedName: true });
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("http://127.0.0.1:5173/?qa");
   await page.waitForFunction(() => window.vaccoinQA);
@@ -44,11 +46,22 @@ try {
   // A player should not need to release the approach key for a vault launch.
   await page.evaluate(() => window.vaccoinQA.teleport(-23, -6, -24.5));
   await page.keyboard.down("w");
-  await page.waitForFunction(() => { const p=window.vaccoinQA.snapshot().position; return p[1]===0 && p[2]>-10; }, null, {timeout:3000});
+  await page.waitForFunction(
+    () => {
+      const p = window.vaccoinQA.snapshot().position;
+      return p[1] === 0 && p[2] > -10;
+    },
+    null,
+    { timeout: 3000 },
+  );
   await page.keyboard.up("w");
   await page.evaluate(() => window.vaccoinQA.teleport(0, 0, -8));
   await page.keyboard.down("w");
-  await page.waitForTimeout(1400);
+  await page.waitForFunction(
+    () => window.vaccoinQA.snapshot().position[2] < -24,
+    null,
+    { timeout: 8000 },
+  );
   await page.keyboard.up("w");
   const floor = await page.evaluate(() => window.vaccoinQA.snapshot());
   assert(floor.position[2] < -24);

@@ -1,3 +1,4 @@
+import { RunAchievements } from "./achievements";
 import { GameServicesError, type GameServices, type LiveSubscription } from "@supagame/sdk-ts";
 import { TOTAL_COINS } from "./coin-counts";
 
@@ -85,6 +86,8 @@ async function deadline<T>(promise: Promise<T>): Promise<T> {
 }
 
 export class Leaderboard {
+  readonly achievements: RunAchievements;
+  async browseAchievements() { await this.ensurePlayer(); await this.achievements.load(); }
   liveStatus = "LOADING LIVE LEADERBOARD";
   liveEntries: Standing[] = [];
   rankNotice = "";
@@ -145,6 +148,7 @@ export class Leaderboard {
     private storage: StorageLike | undefined = browserStorage(),
     private game?: GameServices,
   ) {
+    this.achievements = new RunAchievements(game);
     try {
       const value = Number(storage?.getItem(KEY) ?? 0);
       if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_COINS) {
@@ -168,6 +172,7 @@ export class Leaderboard {
       const profile = await this.game.players.getMe();
       if (profile.displayName !== name)
         await this.game.players.updateMe({ displayName: name });
+      void this.achievements.connect();
       this.userId = userId;
       this.readyName = name;
       return userId;
@@ -409,6 +414,7 @@ export class Leaderboard {
             attempt.key,
           );
           attempt.submitted = true;
+          void this.achievements.load();
           if (revision === this.revision) {
             this.personalBest = result.bestScore;
             this.saveBest(result.bestScore);

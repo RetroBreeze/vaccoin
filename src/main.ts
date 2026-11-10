@@ -45,7 +45,15 @@ async function boot() {
       return [action, control];
     }),
   ) as Record<"open" | "top" | "around" | "back", HTMLButtonElement>;
-  let leaderboardOpen = false;
+  let leaderboardOpen = false, achievementsOpen = false;
+  const achievementsButton = button.cloneNode(false) as HTMLButtonElement;
+  achievementsButton.id = 'achievements-open';
+  achievementsButton.className = 'leaderboard-control';
+  button.after(achievementsButton);
+  achievementsButton.addEventListener('click', () => {
+    achievementsOpen = !achievementsOpen;
+    if (achievementsOpen) void leaderboard.browseAchievements().catch(() => {});
+  });
   const fullscreenButton =
     document.querySelector<HTMLButtonElement>("#fullscreen")!;
   const pauseButton = document.querySelector<HTMLButtonElement>("#pause")!;
@@ -187,12 +195,13 @@ async function boot() {
   if (profile.name) void leaderboard.connect(profile.name);
   else void leaderboard.prepareLive();
   document.addEventListener("visibilitychange", () => {
+    leaderboard.achievements.update(round.phase, document.hidden);
     if (document.hidden) leaderboard.stopLive();
     else void leaderboard.prepareLive();
   });
-  window.addEventListener("pagehide", () => leaderboard.stopLive());
+  window.addEventListener("pagehide", () => { leaderboard.stopLive(); leaderboard.achievements.dispose(); });
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) void leaderboard.prepareLive();
+    if (event.persisted) { void leaderboard.prepareLive(); void leaderboard.achievements.connect(); }
   });
   function stopInput() {
     keys.clear();
@@ -244,7 +253,7 @@ async function boot() {
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
-    if (leaderboardOpen) return;
+    if (leaderboardOpen || achievementsOpen) return;
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -329,6 +338,7 @@ async function boot() {
       (e.code === "Enter" || e.code === "Space")
     )
       return;
+    if (achievementsOpen) { if (e.code === 'Escape') { achievementsOpen = false; achievementsButton.focus(); } return; }
     if (leaderboardOpen) {
       if (e.code === "Escape") {
         e.preventDefault();
@@ -381,6 +391,7 @@ async function boot() {
     status.textContent = `Round complete. ${round.score} coins collected. Play again.`;
   }
   document.addEventListener("visibilitychange", () => {
+    leaderboard.achievements.update(round.phase, document.hidden);
     if (document.hidden) pauseControls();
     finishIfExpired();
   });
@@ -507,10 +518,16 @@ async function boot() {
       namePanel.style.top = `${(layout.nameY / 540) * 100}%`;
       namePanel.style.width = `${(256 / ui.w) * 100}%`;
     }
+    namePanel.hidden = round.phase !== "title" || !!profile.name || leaderboardOpen || achievementsOpen;
     uiState.liveEntries = leaderboard.liveEntries;
     uiState.liveStatus = leaderboard.liveStatus;
     uiState.rankNotice =
       Date.now() < leaderboard.rankNoticeUntil ? leaderboard.rankNotice : "";
+    leaderboard.achievements.update(round.phase, document.hidden);
+    uiState.achievementsOpen = achievementsOpen;
+    uiState.achievements = leaderboard.achievements.rows;
+    uiState.achievementStatus = leaderboard.achievements.status;
+    uiState.achievementNotice = leaderboard.achievements.queue?.current ?? null;
     uiState.phase = round.phase;
     uiState.leaderboardOpen = leaderboardOpen;
     uiState.browseMode = leaderboard.browseMode;
@@ -543,12 +560,14 @@ async function boot() {
     uiState.canRetry = leaderboard.canRetry;
     view.draw();
     ui.draw(uiState, elapsed);
+    ui.drawAchievements(uiState, achievementsButton);
   }
   // Deliberately dev-only QA hooks; stripped out of the production build.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("qa")) {
     Object.assign(window, {
       vaccoinQA: {
         snapshot: () => ({
+          achievements: {open: achievementsOpen, rows: leaderboard.achievements.rows, notice:leaderboard.achievements.queue?.current ?? null},
           live: {
             entries: leaderboard.liveEntries,
             status: leaderboard.liveStatus,

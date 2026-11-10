@@ -19,6 +19,16 @@ const entry: LeaderboardEntry = {
 };
 function fixture() {
   const game = {
+    achievements: {
+      listAchievements: vi.fn(async () => []),
+      getPlayerAchievements: vi.fn(async () => []),
+      getAchievement: vi.fn(async () => null),
+      onUnlocked: vi.fn(() => ({
+        ready: Promise.resolve(),
+        unsubscribe: vi.fn(),
+      })),
+      dispose: vi.fn(),
+    },
     players: {
       ensureAnonymousSession: vi.fn(async () => ({ userId: "player-1" })),
       getMe: vi.fn(async () => ({
@@ -33,7 +43,7 @@ function fixture() {
       })),
     },
     leaderboards: {
-      subscribe: vi.fn(() => ({unsubscribe: vi.fn()})),
+      subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
       submit: vi.fn(async (_board: string, score: number, _key?: string) => ({
         outcome: "best" as const,
         score,

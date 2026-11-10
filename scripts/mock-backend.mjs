@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+const achievementDefinitions = JSON.parse(await readFile(new URL('../src/achievement-definitions.json',import.meta.url),'utf8'));
 // Every browser check intercepts backend HTTP; no test score reaches hosted Supagame.
 export async function mockBackend(
   page,
@@ -119,6 +121,7 @@ export async function mockBackend(
       }
       return json(submissions.get(body.submissionKey));
     }
+    if (url.pathname.endsWith('/achievements')) return json(achievementDefinitions.map(a=>({id:a.id,title:a.title,description:a.description,icon:a.icon,category:a.category,metadata:a.metadata,progress:{current:calls.achievementScore ?? best,threshold:a.condition.threshold},unlocked:(calls.achievementScore ?? best)>=a.condition.threshold,unlockedAt:(calls.achievementScore ?? best)>=a.condition.threshold?'2026-11-10T00:00:00Z':null,historical:false})));
     if (url.pathname.endsWith("/entries")) {
       calls.top++;
       return json({

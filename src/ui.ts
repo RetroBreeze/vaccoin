@@ -1,8 +1,13 @@
+import type { Achievement } from "@supagame/sdk-ts";
 import { drawTitleScreen, titleLayout } from "./title-screen";
 import { pixelText } from "./pixel-font";
 import { Phase } from "./round";
 import { Standing } from "./supagame";
 export interface UIState {
+  achievementsOpen?: boolean;
+  achievements?: Achievement[];
+  achievementNotice?: Achievement | null;
+  achievementStatus?: string;
   liveEntries?: Standing[];
   liveStatus?: string;
   rankNotice?: string;
@@ -114,8 +119,8 @@ export class UI {
     this.text(
       label,
       x + width / 2,
-      y + (height - 14) / 2,
-      2,
+      y + (height - (width < 180 ? 7 : 14)) / 2,
+      width < 180 ? 1 : 2,
       active ? C.dark : C.gold,
       "center",
     );
@@ -196,6 +201,76 @@ export class UI {
       this.menuButton(this.retry, "RETRY RANKINGS", cx - 112, 437, 224, 28);
     this.menuButton(controls.back, "BACK", cx - 112, 478, 224, 36);
   }
+  drawAchievements(s: UIState, control: HTMLButtonElement) {
+    control.style.display = "none";
+    const cx = this.w / 2;
+    if (s.phase === "title" && !s.leaderboardOpen) {
+      if (s.achievementsOpen) {
+        this.button.style.display = "none";
+        this.retry.style.display = "none";
+        if (this.leaderboard)
+          for (const c of Object.values(this.leaderboard))
+            c.style.display = "none";
+        this.rect(0, 0, this.w, 540, C.dark);
+        this.text("ACHIEVEMENTS", cx, 30, 3, C.gold, "center");
+        for (const [i, a] of (s.achievements ?? []).entries()) {
+          const y = 85 + i * 57;
+          this.rect(
+            cx - 240,
+            y - 8,
+            480,
+            49,
+            a.unlocked ? "#28505d" : "#173341",
+          );
+          this.text(
+            a.unlocked ? "+" : "-",
+            cx - 225,
+            y + 4,
+            3,
+            a.unlocked ? C.gold : C.muted,
+          );
+          this.text(
+            a.title.toUpperCase(),
+            cx - 194,
+            y,
+            2,
+            a.unlocked ? C.gold : C.muted,
+          );
+          this.text(a.description.toUpperCase(), cx - 194, y + 20, 1, C.white);
+          this.text(
+            a.unlocked ? "UNLOCKED" : "LOCKED",
+            cx + 225,
+            y + 4,
+            1,
+            a.unlocked ? C.mint : C.muted,
+            "right",
+          );
+        }
+        this.text(s.achievementStatus ?? "", cx, 440, 1, C.muted, "center");
+        this.menuButton(control, "BACK", cx - 112, 478, 224, 36);
+      } else {
+        const layout = titleLayout(this.w);
+        this.menuButton(
+          control,
+          "ACHIEVEMENTS",
+          layout.left + 4,
+          layout.menuY + 60,
+          124,
+          30,
+        );
+      }
+    }
+    const a = s.achievementNotice;
+    if (a && s.phase !== "playing" && !s.achievementsOpen) {
+      this.rect(cx - 235, 12, 470, 67, "#071b2bf5");
+      this.rect(cx - 235, 12, 4, 67, C.gold);
+      this.rect(cx - 219, 32, 18, 22, C.gold);
+      this.rect(cx - 214, 35, 5, 15, "#b87926");
+      this.text("ACHIEVEMENT UNLOCKED", cx - 188, 23, 1, C.mint);
+      this.text(a.title.toUpperCase(), cx - 188, 38, 2, C.gold);
+      this.text(a.description.toUpperCase(), cx - 188, 61, 1, C.white);
+    }
+  }
   draw(s: UIState, dt: number) {
     const c = this.ctx,
       w = this.w,
@@ -259,7 +334,7 @@ export class UI {
             "LEADERBOARD",
             layout.left - 128,
             layout.menuY + 60,
-            256,
+            124,
             30,
           );
       }

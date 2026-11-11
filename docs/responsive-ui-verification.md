@@ -50,3 +50,10 @@ Removed the falling-coin canvas, animation module and its tests; the floating 3D
 The vacuum rig previously remained at the camera origin until the first simulation step, which is intentionally delayed by the countdown. Its constructor and each new round now initialize the normal resting pose; idle presentation continues during the countdown without enabling movement or collection. Starting a round restores the normal 78-degree FOV and player camera. Regression coverage includes first launch and resetting animation from an earlier round.
 
 Current validation: 174 unit tests in 30 files and production build pass. Pixel 9 landscape checks pass. The countdown browser regression checks the player camera and lower-right vacuum pose on mobile/desktop; its screenshot is `test-results/countdown-normal-view.png`.
+
+## PSX menu styling (2026-11-11)
+
+- Replaced serif/Courier menu typography with a local OpenType font generated from the existing 5×7 HUD alphabet. Regenerate the checked-in asset with `node scripts/build-menu-font.mjs`; unsupported characters retain the system fallback.
+- Flat, square controls use solid fills and colour changes for selection/presses, without bevels. Translucent blue-black panels retain the moving casino background with restrained gold borders.
+- `npm run build` passed (existing bundle-size advisory). `node scripts/landscape-ui-browser-test.mjs` passed all menu flows at 756×308, 808×360, 924×412, and 844×390, with no scrolling, overlapping controls, or undersized touch targets.
+- Visually inspected the Pixel 9 lobby, shop, and achievements captures and checked desktop font loading/rendering separately.

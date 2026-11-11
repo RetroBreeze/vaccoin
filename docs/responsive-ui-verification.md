@@ -42,3 +42,11 @@ Menus now use translucent surfaces over a floating casino view. The camera follo
 Coin rain now rotates through face, edge and back views, with independent tumble direction/speed, in-plane roll, accelerated falls into terminal velocity, lateral drift and staggered respawns above the viewport. It retains the small cached atlas and static reduced-motion rendering.
 
 Passing checks: `node scripts/menu-background-browser-test.mjs`, `node scripts/landscape-ui-browser-test.mjs`, `node scripts/start-countdown-browser-test.mjs`; 177 unit tests in 31 files; production build. Controlled browser clocks prevent software WebGL from distorting timing assertions. Rendered previews are saved to `test-results/floating-casino-menu.png` and `test-results/floating-casino-shop.png`.
+
+## Coin overlay removal and countdown view fix
+
+Removed the falling-coin canvas, animation module and its tests; the floating 3D casino remains as the menu background. Landscape checks assert that the coin overlay is absent.
+
+The vacuum rig previously remained at the camera origin until the first simulation step, which is intentionally delayed by the countdown. Its constructor and each new round now initialize the normal resting pose; idle presentation continues during the countdown without enabling movement or collection. Starting a round restores the normal 78-degree FOV and player camera. Regression coverage includes first launch and resetting animation from an earlier round.
+
+Current validation: 174 unit tests in 30 files and production build pass. Pixel 9 landscape checks pass. The countdown browser regression checks the player camera and lower-right vacuum pose on mobile/desktop; its screenshot is `test-results/countdown-normal-view.png`.

@@ -731,12 +731,6 @@ body:not(.casino-entered) #achievement-toast {
 .menu-screen {
   isolation: isolate;
 }
-.menu-rain {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
 .menu-screen .menu-content {
   position: relative;
   z-index: 1;

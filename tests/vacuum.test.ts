@@ -73,3 +73,33 @@ it("keeps the pre-overhaul attraction endpoint and settles suction recoil", () =
   }
   expect(Math.abs(v.group.children[0].position.z)).toBeLessThan(0.0001);
 });
+it("starts in the normal first-person pose before simulation runs", () => {
+  const camera = new PerspectiveCamera(78, 16 / 9);
+  const vacuum = new Vacuum(camera);
+  const idle = new Vacuum(camera);
+  idle.update(1 / 60, 0, false, 0, 0);
+  expect(vacuum.group.position.toArray()).toEqual(
+    idle.group.position.toArray(),
+  );
+  expect(vacuum.group.scale.toArray()).toEqual(idle.group.scale.toArray());
+  expect(vacuum.group.position.z).toBeLessThan(-0.5);
+});
+it("resets the resting pose for countdowns after a previous round", () => {
+  const camera = new PerspectiveCamera(78, 16 / 9);
+  const vacuum = new Vacuum(camera);
+  const idle = new Vacuum(new PerspectiveCamera(78, 16 / 9));
+  for (let i = 0; i < 30; i++)
+    vacuum.update(1 / 60, i / 60, true, 14, 150, 8, false);
+  camera.rotation.set(-0.12, 0, 0);
+  vacuum.reset();
+  idle.update(0, 0, false, 0, 0);
+  expect(vacuum.group.position.toArray()).toEqual(
+    idle.group.position.toArray(),
+  );
+  expect(vacuum.group.children[0].position.toArray()).toEqual(
+    idle.group.children[0].position.toArray(),
+  );
+  expect(vacuum.group.children[0].rotation.toArray()).toEqual(
+    idle.group.children[0].rotation.toArray(),
+  );
+});

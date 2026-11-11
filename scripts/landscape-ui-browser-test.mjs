@@ -92,11 +92,20 @@ try {
   });
   // Allow SDK subscription/retry timers to progress while rendering one frame per step.
   for (let attempt = 0; attempt < 20; attempt++) {
-    if (await page.evaluate(() => window.vaccoinQA.snapshot().live.entries.length === 10)) break;
+    if (
+      await page.evaluate(
+        () => window.vaccoinQA.snapshot().live.entries.length === 10,
+      )
+    )
+      break;
     await page.clock.fastForward(250);
     await page.waitForTimeout(50);
   }
-  assert.equal(await page.evaluate(() => window.vaccoinQA.snapshot().live.entries.length), 10, 'mock live top ten loaded');
+  assert.equal(
+    await page.evaluate(() => window.vaccoinQA.snapshot().live.entries.length),
+    10,
+    "mock live top ten loaded",
+  );
   for (const viewport of [
     devices["Pixel 9 landscape"].viewport,
     devices["Pixel 9 landscape"].screen,
@@ -142,27 +151,14 @@ try {
     await fits(page, `results-${ref}`);
     await tap(page, "#main-menu");
   }
-  const rain = page.locator("#menu-coins");
-  await rain.waitFor({ state: "visible" });
-  const before = await rain.evaluate((c) => c.toDataURL());
-  await page.clock.fastForward(150);
-  assert.notEqual(
-    await rain.evaluate((c) => c.toDataURL()),
-    before,
-    "menu coin rain animates",
-  );
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.fastForward(100);
-  const still = await rain.evaluate((c) => c.toDataURL());
-  await page.clock.fastForward(150);
   assert.equal(
-    await rain.evaluate((c) => c.toDataURL()),
-    still,
-    "reduced motion holds coins still",
+    await page.locator("#menu-coins").count(),
+    0,
+    "falling coins removed",
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS Pixel 9 landscape: no scrolling, controls visible, name editor, rankings, achievements, shop, account, deletion and coin rain",
+    "PASS Pixel 9 landscape: no scrolling, controls visible, name editor, rankings, achievements, shop, account, deletion and no falling coins",
   );
 } finally {
   await browser.close();

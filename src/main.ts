@@ -409,7 +409,10 @@ async function boot() {
     accumulator = 0;
     countdown = 60;
     stopInput();
+    view.camera.fov = 78;
+    view.camera.updateProjectionMatrix();
     cameraToPlayer();
+    vacuum.reset(performance.now() / 1000);
     audio.start();
     status.textContent = "Round started. 60 seconds.";
     error = "";
@@ -650,6 +653,7 @@ async function boot() {
     if (portrait() && (portableActive || locked)) pauseControls();
     const captured = round.phase === "playing" && controlsActive();
     const active = captured && round.countdown(now) === 0;
+    if (captured && !active) vacuum.update(elapsed, now / 1000, false, 0, 0);
     audio.updateMusic(captured);
     pauseButton.hidden = round.phase !== "playing" || !captured;
     touch.show(captured && mobile);
@@ -791,6 +795,7 @@ async function boot() {
           },
           phase: round.phase,
           cameraPosition: view.camera.position.toArray(),
+          vacuumPosition: vacuum.group.position.toArray(),
           score: round.score,
           remaining: round.remaining(performance.now()),
           countdown: round.countdown(performance.now()),

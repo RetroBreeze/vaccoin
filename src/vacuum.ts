@@ -61,6 +61,17 @@ export class Vacuum {
     this.setLayers();
     this.previousRotation.copy(camera.quaternion);
     camera.add(this.group);
+    this.reset();
+  }
+  /** Set a valid first-person pose even while round simulation is frozen. */
+  reset(time = 0) {
+    this.power = 0;
+    this.sway.set(0, 0);
+    this.previousRotation.copy(this.camera.quaternion);
+    this.deltaRotation.identity();
+    this.airborne = false;
+    this.landing = this.lift = this.pulse = 0;
+    this.update(0, time, false, 0, 0);
   }
   private setLayers() {
     this.group.traverse((o) => {

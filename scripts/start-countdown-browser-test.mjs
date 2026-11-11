@@ -47,6 +47,27 @@ try {
     "normal Play must not show Resume",
   );
   assert.equal(start.countdown, 3);
+  assert.deepEqual(
+    start.cameraPosition,
+    [start.position[0], start.position[1] + 1.7, start.position[2]],
+    "countdown uses the normal player camera",
+  );
+  assert(
+    start.vacuumPosition[2] < -0.5 &&
+      start.vacuumPosition[0] > 0 &&
+      start.vacuumPosition[1] < 0,
+    "vacuum is already in its normal lower-right pose",
+  );
+  await mobile.clock.fastForward(20);
+  assert.equal(
+    await mobile.locator("#lobby").isVisible(),
+    false,
+    "countdown renders the gameplay view",
+  );
+  await mobile.screenshot({
+    path: "test-results/countdown-normal-view.png",
+    scale: "css",
+  });
   assert.equal(start.remaining, 60);
   await mobile.keyboard.down("w");
   await mobile.evaluate(() => {
@@ -100,6 +121,10 @@ try {
   assert.equal(await desktop.locator("#pause-menu").isVisible(), false);
   assert.equal((await snapshot(desktop)).remaining, 60);
   assert.equal((await snapshot(desktop)).countdown, 3);
+  assert(
+    (await snapshot(desktop)).vacuumPosition[2] < -0.5,
+    "desktop countdown also has the resting vacuum pose",
+  );
   await desktop.keyboard.down("w");
   const before = await snapshot(desktop);
   await desktop.clock.fastForward(400);

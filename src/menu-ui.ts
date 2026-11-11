@@ -1,5 +1,4 @@
 import type { UIState } from "./ui";
-import { CoinRain } from "./coin-rain";
 import { MenuSurface, updateStandings } from "./menu-surface";
 
 export class MenuUI {
@@ -10,7 +9,6 @@ export class MenuUI {
   private pause = new MenuSurface("pause-menu", "pause-screen");
   private toast = document.createElement("aside");
   private lastView = "";
-  private rain = new CoinRain(this.home.root);
   private get(id: string) {
     return document.getElementById(id) as HTMLButtonElement;
   }
@@ -150,7 +148,6 @@ export class MenuUI {
     if (s.rankNotice) p.text("notice", s.rankNotice, "rank-notice", intro);
     if (s.error) p.text("error", s.error, "menu-error", intro);
     p.end();
-    this.rain.draw(s.time);
   }
   private drawResults(s: UIState) {
     const p = this.results;

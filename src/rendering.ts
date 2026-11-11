@@ -1,6 +1,8 @@
 import * as T from "three";
 export class Rendering {
   readonly renderer: T.WebGLRenderer;
+  private menuMode = false;
+  private lastBackgroundFrame = -Infinity;
   readonly scene = new T.Scene();
   readonly camera = new T.PerspectiveCamera(78, 1, 0.08, 230);
   constructor(canvas: HTMLCanvasElement) {
@@ -28,14 +30,38 @@ export class Rendering {
     this.camera.rotation.order = "YXZ";
     this.resize();
   }
+  get needsFrame() {
+    return this.lastBackgroundFrame === -Infinity;
+  }
+  setMenuMode(menuMode: boolean) {
+    if (this.menuMode === menuMode) return;
+    this.menuMode = menuMode;
+    this.resize();
+  }
   resize() {
+    this.lastBackgroundFrame = -Infinity;
     const aspect = innerWidth / innerHeight;
-    this.renderer.setPixelRatio(window.devicePixelRatio || 1);
+    const ratio = this.menuMode
+      ? Math.min(
+          window.devicePixelRatio || 1,
+          1,
+          960 / innerWidth,
+          540 / innerHeight,
+        )
+      : window.devicePixelRatio || 1;
+    this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(innerWidth, innerHeight, false);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
-  draw() {
+  draw(now = performance.now(), reducedMotion = false) {
+    if (
+      this.menuMode &&
+      this.lastBackgroundFrame !== -Infinity &&
+      (reducedMotion || now - this.lastBackgroundFrame < 1000 / 24)
+    )
+      return;
+    this.lastBackgroundFrame = now;
     this.renderer.info.reset();
     this.camera.layers.set(0);
     this.renderer.render(this.scene, this.camera);

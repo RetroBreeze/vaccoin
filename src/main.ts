@@ -9,6 +9,7 @@ import "./style.css";
 import { Vector3 } from "three";
 import { Assets } from "./assets";
 import { Rendering } from "./rendering";
+import { MenuCamera } from "./menu-camera";
 import { buildArena, updateCasinoVisibility } from "./arena";
 import { CasinoAtmosphere } from "./casino-atmosphere";
 import { CasinoSpectacle } from "./casino-spectacle";
@@ -83,6 +84,8 @@ async function boot() {
   const displayMessage =
     document.querySelector<HTMLElement>("#display-message")!;
   const mobile = matchMedia("(pointer: coarse)").matches;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const menuCamera = new MenuCamera();
   const immersive = new ImmersiveDisplay(mobile);
   const audio = new AudioEngine();
   const entered = installEntryScreen(audio, immersive);
@@ -694,12 +697,12 @@ async function boot() {
     coins.flush();
     effects.update(elapsed, now / 1000, sucking);
     vacuum.equip(workshop.progress.equipped);
-    vacuum.group.visible = round.phase !== "title";
-    if (round.phase === "title") {
-      const t = now * 0.00007;
-      view.camera.position.set(4 + Math.sin(t) * 2, 3, 30);
-      view.camera.lookAt(0, 3, -6);
-      emblem.rotation.y = Math.sin(now * 0.0005) * 0.15;
+    const menuBackground = round.phase !== "playing";
+    view.setMenuMode(menuBackground);
+    vacuum.group.visible = !menuBackground;
+    if (menuBackground) {
+      menuCamera.update(view.camera, elapsed, reducedMotion.matches);
+      emblem.rotation.y = reducedMotion.matches ? 0 : Math.sin(now * 0.0005) * 0.15;
     } else {
       const desired = 78 + (player.speed / 14) * 3;
       if (Math.abs(view.camera.fov - desired) > 0.05) {
@@ -757,8 +760,9 @@ async function boot() {
     updateCasinoVisibility(view.scene,view.camera.position.y);
     atmosphere.update(now / 1000, destructibles.objects);
     spectacle.update(now / 1000);
-    // Native menus are opaque; reserve arena rendering for active gameplay.
-    if (entered() && round.phase === "playing" && controlsActive() && !workshopUI.open && !accounts.open) view.draw();
+    // Menus share the casino view; gameplay always restores its full render resolution.
+    if (entered() && !document.hidden && (menuBackground || controlsActive() || view.needsFrame))
+      view.draw(now, reducedMotion.matches);
     uiState.menuCovered = workshopUI.open || accounts.open;
     ui.draw(uiState, elapsed);
     if (workshopUI.open || accounts.open) ui.menus?.hide();
@@ -786,6 +790,7 @@ async function boot() {
             status: leaderboard.browseStatus,
           },
           phase: round.phase,
+          cameraPosition: view.camera.position.toArray(),
           score: round.score,
           remaining: round.remaining(performance.now()),
           countdown: round.countdown(performance.now()),

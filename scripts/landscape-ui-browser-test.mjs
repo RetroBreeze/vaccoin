@@ -8,6 +8,10 @@ const browser = await chromium.launch({
   args: ["--no-sandbox"],
 });
 const errors = [];
+async function tap(page, selector) {
+  await page.locator(selector).tap();
+  await page.clock.fastForward(20);
+}
 async function fits(page, label) {
   const view = label.split("-")[0];
   const id = {
@@ -76,17 +80,23 @@ try {
     deviceScaleFactor: 1,
   });
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await mockBackend(page, { savedName: true });
   await page.goto("http://127.0.0.1:5173/?qa");
   await enterCasino(page);
+  await page.waitForFunction(() => window.vaccoinQA);
+  await page.clock.fastForward(20);
   await page.evaluate(() => {
     document.documentElement.requestFullscreen = undefined;
   });
-  await page.waitForFunction(
-    () =>
-      window.vaccoinQA?.snapshot().achievements.rows.length === 6 &&
-      window.vaccoinQA.snapshot().live.entries.length === 10,
-  );
+  // Allow SDK subscription/retry timers to progress while rendering one frame per step.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if (await page.evaluate(() => window.vaccoinQA.snapshot().live.entries.length === 10)) break;
+    await page.clock.fastForward(250);
+    await page.waitForTimeout(50);
+  }
+  assert.equal(await page.evaluate(() => window.vaccoinQA.snapshot().live.entries.length), 10, 'mock live top ten loaded');
   for (const viewport of [
     devices["Pixel 9 landscape"].viewport,
     devices["Pixel 9 landscape"].screen,
@@ -94,55 +104,57 @@ try {
     { width: 844, height: 390 },
   ]) {
     await page.setViewportSize(viewport);
+    await page.clock.fastForward(20);
     const ref = `${viewport.width}x${viewport.height}`;
     await fits(page, `lobby-${ref}`);
-    await page.locator("#change-name").tap();
+    await tap(page, "#change-name");
     await fits(page, `name-${ref}`);
-    await page.locator("#cancel-name").tap();
-    await page.locator("#leaderboard-open").tap();
+    await tap(page, "#cancel-name");
+    await tap(page, "#leaderboard-open");
     await page.waitForFunction(
       () =>
         window.vaccoinQA.snapshot().leaderboardBrowser.entries.length === 10,
     );
     await fits(page, `rankings-${ref}`);
-    await page.locator("#leaderboard-back").tap();
-    await page.locator("#achievements-open").tap();
+    await tap(page, "#leaderboard-back");
+    await tap(page, "#achievements-open");
     await fits(page, `achievements-${ref}`);
-    await page.locator("#achievements-open").tap();
-    await page.locator("#workshop-open").tap();
+    await tap(page, "#achievements-open");
+    await tap(page, "#workshop-open");
     await fits(page, `shop-${ref}`);
-    await page.locator("#workshop-back").tap();
-    await page.locator("#account-open").tap();
+    await tap(page, "#workshop-back");
+    await tap(page, "#account-open");
     await fits(page, `account-${ref}`);
-    await page.locator("#account-deleteSave").tap();
+    await tap(page, "#account-deleteSave");
     await fits(page, `delete-${ref}`);
-    await page.locator("#account-decline").tap();
-    await page.locator("#account-back").tap();
-    await page.locator("#play").tap();
+    await tap(page, "#account-decline");
+    await tap(page, "#account-back");
+    await tap(page, "#play");
     await page.waitForFunction(
       () => window.vaccoinQA.snapshot().phase === "playing",
     );
     await page.evaluate(() => window.vaccoinQA.expire());
+    await page.clock.fastForward(20);
     await page.locator("#main-menu").waitFor({ state: "visible" });
     await page.waitForFunction(
       () => window.vaccoinQA.snapshot().entries.length === 10,
     );
     await fits(page, `results-${ref}`);
-    await page.locator("#main-menu").tap();
+    await tap(page, "#main-menu");
   }
   const rain = page.locator("#menu-coins");
   await rain.waitFor({ state: "visible" });
   const before = await rain.evaluate((c) => c.toDataURL());
-  await page.waitForTimeout(150);
+  await page.clock.fastForward(150);
   assert.notEqual(
     await rain.evaluate((c) => c.toDataURL()),
     before,
     "menu coin rain animates",
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.waitForTimeout(100);
+  await page.clock.fastForward(100);
   const still = await rain.evaluate((c) => c.toDataURL());
-  await page.waitForTimeout(150);
+  await page.clock.fastForward(150);
   assert.equal(
     await rain.evaluate((c) => c.toDataURL()),
     still,

@@ -34,3 +34,11 @@ Removed the decorative menu slogans and entry captions. Sound now occupies a nor
 `node scripts/start-countdown-browser-test.mjs` passes: a fullscreen transition that blurs the window no longer leaves a fresh round paused. Controls activate after the transition; 3/2/1 holds movement, aim, suction and scoring while preserving the full 60-second timer. Later blur/Escape still pauses and Resume continues the same round. This timing regression uses a controlled browser clock and reduced render resolution because the test environment uses software WebGL.
 
 Current unit suite: 170 tests in 29 files pass; production build passes. Name editing, public/nearby leaderboard, account controls and the complete responsive browser regression also pass after these corrections.
+
+## Transparent casino background and natural coin motion
+
+Menus now use translucent surfaces over a floating casino view. The camera follows a continuous 120-second loop through the open ground-floor corridors; unit checks sample the entire route for wall/column clearance. Menu rendering is capped at 960×540, DPR 1 and 24 frames per second, with full gameplay resolution restored on entry. Reduced motion freezes the view; a resize also refreshes the frozen paused-game background.
+
+Coin rain now rotates through face, edge and back views, with independent tumble direction/speed, in-plane roll, accelerated falls into terminal velocity, lateral drift and staggered respawns above the viewport. It retains the small cached atlas and static reduced-motion rendering.
+
+Passing checks: `node scripts/menu-background-browser-test.mjs`, `node scripts/landscape-ui-browser-test.mjs`, `node scripts/start-countdown-browser-test.mjs`; 177 unit tests in 31 files; production build. Controlled browser clocks prevent software WebGL from distorting timing assertions. Rendered previews are saved to `test-results/floating-casino-menu.png` and `test-results/floating-casino-shop.png`.

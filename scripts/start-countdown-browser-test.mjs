@@ -14,6 +14,7 @@ async function ready(page) {
   await page.goto("http://127.0.0.1:5173/?qa");
   await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
+  await page.clock.fastForward(20);
 }
 try {
   const mobile = await browser.newPage({
@@ -23,8 +24,8 @@ try {
     deviceScaleFactor: 0.25,
   });
   await mobile.clock.install();
+  await mobile.clock.pauseAt(new Date(Date.now() + 1000));
   await ready(mobile);
-  await mobile.clock.pauseAt(new Date(Date.now() + 100));
   await mobile.evaluate(() => {
     document.documentElement.requestFullscreen = () =>
       new Promise((resolve) => {
@@ -86,8 +87,8 @@ try {
     deviceScaleFactor: 0.25,
   });
   await desktop.clock.install();
+  await desktop.clock.pauseAt(new Date(Date.now() + 1000));
   await ready(desktop);
-  await desktop.clock.pauseAt(new Date(Date.now() + 100));
   await desktop.locator("#play").click();
   await desktop.clock.fastForward(20);
   await desktop.clock.fastForward(200);

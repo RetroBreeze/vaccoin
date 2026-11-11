@@ -10,7 +10,11 @@ try {
     { width: 1280, height: 720 },
     { width: 390, height: 844 },
   ]) {
-    const page = await browser.newPage({ viewport, isMobile: viewport.width < 500, hasTouch: viewport.width < 500 });
+    const page = await browser.newPage({
+      viewport,
+      isMobile: viewport.width < 500,
+      hasTouch: viewport.width < 500,
+    });
     const errors = [];
     page.on("pageerror", (e) => {
       errors.push(e.message);
@@ -30,12 +34,16 @@ try {
         .getByRole("button", { name: "SIGN IN WITH GOOGLE", exact: true })
         .isVisible(),
     );
-    assert.equal(await page.locator('#rotate-device').isVisible(), false, 'Account controls must be readable in portrait');
+    assert.equal(
+      await page.locator("#rotate-device").isVisible(),
+      false,
+      "Account controls must be readable in portrait",
+    );
     await page.screenshot({
       path: `test-results/accounts-${viewport.width}.png`,
     });
     await page
-      .getByRole("button", { name: "BACK TO GAME", exact: true })
+      .getByRole("button", { name: "RETURN TO GUEST GAME", exact: true })
       .click();
     assert.deepEqual(errors, []);
     await page.close();

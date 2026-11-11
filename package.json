@@ -13,13 +13,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
-    "@supagame/contracts": "file:../supagame/artifacts/supagame-contracts-0.1.3.tgz",
-    "@supagame/sdk-ts": "file:../supagame/artifacts/supagame-sdk-ts-0.1.3.tgz",
+    "@supagame/contracts": "file:../supagame/artifacts/supagame-contracts-0.1.4.tgz",
+    "@supagame/sdk-ts": "file:../supagame/artifacts/supagame-sdk-ts-0.1.4.tgz",
     "three": "^0.180.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "@supagame/cli": "file:../supagame/artifacts/supagame-cli-0.1.3.tgz",
+    "@supagame/cli": "file:../supagame/artifacts/supagame-cli-0.1.4.tgz",
     "@types/three": "^0.180.0",
     "prettier": "^3.9.10",
     "supabase": "3.0.0",

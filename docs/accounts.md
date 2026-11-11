@@ -6,7 +6,7 @@ WITH GOOGLE** (recover another account). Permanent players see linked provider s
 and **SIGN OUT**, with confirmation. Anonymous play remains available without registration
 prompts. Sign-out is local to this browser; no account is deleted.
 
-The game uses installed Supagame 0.1.3 tarballs, Supabase PKCE and a project-scoped durable
+The game uses installed Supagame 0.1.4 tarballs, Supabase PKCE and a project-scoped durable
 account store. It handles callbacks before starting Workshop synchronization. Before
 leaving a guest, Workshop drains in-flight sync, retains pending operations and supplies
 its latest snapshot to `game.saves.prepareAccountSwitch`. JSON snapshots survive the
@@ -14,15 +14,20 @@ OAuth redirect. Only the authenticated target's data appears in conflict compari
 
 The conflict panel shows wallet, lifetime earnings, completed runs, design count and
 equipped vacuum. Choices are **KEEP GOOGLE PROGRESS**, **KEEP GUEST PROGRESS**, **MERGE
-PROGRESS**, and **CANCEL**. Replacement requires a second confirmation. A revision
+PROGRESS**, and **DECIDE LATER / STAY SIGNED IN**. Replacement requires a second confirmation. A revision
 conflict offers **REVIEW LATEST CLOUD** and requires a fresh choice. **EXPORT RECOVERY**
 downloads the guest and permitted target backup data without credentials.
 
 Keep Google makes no cloud writes, archives the target's prior local queue and loads
 its current cloud state. Keep Guest imports the guest's Workshop state into the Google
 account without changing either Auth identity. The original guest remains untouched.
-Cancel changes no saves and retains the snapshot; it cannot undo completed Google
-sign-in. The choice panel stays open until the player chooses how to continue.
+The panel explicitly says Google is signed in. **Keep Google progress** declines guest
+import and resumes the Google save. **Decide later / stay signed in** changes no saves,
+retains the guest snapshot and flow marker, and keeps Workshop paused; reloading resumes
+the decision. It does not claim to cancel authentication. After a provider cancellation,
+**Return to guest game** is available only if the original guest session is still verified.
+Guest credentials are never copied for rollback; signing out Google cannot recover an
+unlinked guest's lost session.
 
 ## Deterministic merge policy
 
@@ -67,13 +72,22 @@ ACCOUNTS_TEST_ORIGIN=http://127.0.0.1:5173 node scripts/accounts-oauth-browser-t
 
 Browser tests intercept every backend request and Realtime connection. They exercise
 desktop/mobile controls and full mocked OAuth redirects for linking/Keep Cloud/Keep
-Guest/merge. They do not authenticate with real Google. Real verification requires a
+Guest/merge, deferred resolution across reload and provider cancellation. They do not authenticate with real Google. Real verification requires a
 configured provider and a test Google account: record a guest's ID/progress, link it,
 check ID preservation, recover it in another browser, then test conflict choices with a
 second disposable guest.
 
-Recovery backups remain on this browser in IndexedDB until explicitly discarded through
-the SDK. Export before clearing browser storage. They are not hosted revision history.
+Guest snapshots and local review copies remain in IndexedDB until explicitly discarded.
+Export before clearing browser storage. New Keep Guest/Merge replacements also archive the
+previous Google Workshop save on the server: five revisions per slot, at most 30 days,
+sharing existing save quotas. The confirmation screen states this recovery window. Failed
+replacements leave valid cloud data intact. Any authenticated device can explicitly restore
+via `game.saves.listRevisions('vacuum-workshop')` and `restoreRevision`, with a current
+revision check and user consent; the SDK documentation includes a full example. Workshop
+must be paused and rehydrated with `acceptAccountCloud()` after a developer-driven restore.
+No in-game revision-history browser is included. Updating the installed packages alone
+does not enable this on hosted Supabase: deploy the additive save-revisions migration and
+updated Supagame Edge function first. Old local-only backups are not retroactively hosted.
 The SDK supports bounded binary transfers; Vaccoin's Workshop slot is JSON. Missing
 credentials, offline login, expired flow state, storage quota and conflicts surface errors
 while preserving staged progress. Account recovery needs the linked provider; an unlinked

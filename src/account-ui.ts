@@ -34,7 +34,7 @@ export class AccountUI {
       merge: () => {
         this.confirm = "merge";
       },
-      cancel: () => void account.resolve("cancel", true),
+      defer: () => void account.resolve("defer", true),
       cloudWallet: () => {
         account.economy = "cloud";
       },
@@ -74,10 +74,11 @@ export class AccountUI {
       y: number,
       size = 1,
       color = "#fff2d2",
+      maxWidth = Infinity,
     ) => {
       // Compensate the existing portrait canvas stretch for readable account text.
       const scale = Math.max(1, innerHeight / 540 / (innerWidth / w));
-      const available = x === cx ? w - 32 : w / 2 - 24;
+      const available = Math.min(maxWidth, x === cx ? w - 32 : w / 2 - 24);
       c.save();
       c.translate(x, y);
       c.scale(Math.min(scale, available / Math.max(1, textWidth(t, size))), 1);
@@ -106,7 +107,7 @@ export class AccountUI {
       c.fillRect(x, y, width, 34);
       c.fillStyle = "#8cf0d1";
       c.fillRect(x, y, width, 2);
-      text(label, x + width / 2, y + 14);
+      text(label, x + width / 2, y + 14, 1, "#fff2d2", width - 16);
     };
     if (!this.account.open) {
       if (titleVisible)
@@ -125,7 +126,7 @@ export class AccountUI {
             ? "GUEST ACCOUNT"
             : "ACCOUNT",
       cx,
-      30,
+      36,
       2,
       "#ffcf58",
     );
@@ -139,7 +140,13 @@ export class AccountUI {
         1,
         "#ffcf58",
       );
-      text("RECOVERY COPIES STAY ON THIS DEVICE.", cx, 130);
+      text(
+        this.confirm === "signOut"
+          ? "GUEST COPIES REMAIN ON THIS DEVICE."
+          : "CLOUD BACKUP: 30 DAYS / LAST 5 PER SLOT",
+        cx,
+        130,
+      );
       text("SCORES AND ACHIEVEMENTS WILL NOT TRANSFER.", cx, 153);
       if (this.confirm === "merge") {
         text("CHOOSE WALLET + STATISTICS + EQUIPMENT", cx, 195);
@@ -158,7 +165,14 @@ export class AccountUI {
       return;
     }
     if (a.review) {
-      text("WHICH PROGRESS WOULD YOU LIKE TO USE?", cx, 62);
+      text("WHICH PROGRESS WOULD YOU LIKE TO USE?", cx, 60);
+      text(
+        "SIGNED IN TO GOOGLE / KEEP GOOGLE SKIPS IMPORT",
+        cx,
+        78,
+        1,
+        "#8cf0d1",
+      );
       const slot = a.review.slots.find((s) => s.slot === "vacuum-workshop");
       for (const [i, value] of [slot?.guest, slot?.cloud].entries()) {
         const x = cx + (i ? 1 : -1) * Math.min(160, w / 4);
@@ -188,7 +202,7 @@ export class AccountUI {
       button("cloud", "KEEP GOOGLE PROGRESS", cx - 130, 255);
       button("guest", "KEEP GUEST PROGRESS", cx - 130, 299);
       button("merge", "MERGE PROGRESS", cx - 130, 343);
-      button("cancel", "CANCEL", cx - 130, 387);
+      button("defer", "DECIDE LATER / STAY SIGNED IN", cx - 130, 387);
       button("export", "EXPORT RECOVERY", cx - 130, 431);
     } else {
       text(
@@ -206,7 +220,12 @@ export class AccountUI {
         text("LINKED: " + a.status.providers.join(", ").toUpperCase(), cx, 145);
         button("signOut", "SIGN OUT", cx - 130, 210);
       } else button("signIn", "SIGN IN WITH GOOGLE", cx - 130, 180);
-      button("back", "BACK TO GAME", cx - 130, 360);
+      button(
+        "back",
+        a.status.isAnonymous ? "RETURN TO GUEST GAME" : "BACK TO GAME",
+        cx - 130,
+        360,
+      );
     }
     const max = Math.max(24, Math.floor((w - 40) / 6));
     const message = a.busy ? "WORKING / PLEASE WAIT" : a.message.toUpperCase();

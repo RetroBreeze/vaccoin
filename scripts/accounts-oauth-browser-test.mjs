@@ -37,10 +37,13 @@ try {
     ["guest", 390],
     ["merge", 1280],
     ["link", 390],
+    ["defer", 390],
+    ["cancelAuth", 1280],
   ]) {
     const page = await browser.newPage({
         viewport: { width, height: width === 390 ? 844 : 720 },
-        isMobile: width === 390, hasTouch: width === 390,
+        isMobile: width === 390,
+        hasTouch: width === 390,
       }),
       errors = [];
     page.on("pageerror", (e) => {
@@ -90,7 +93,10 @@ try {
       });
     const redirect = async (route, url) => {
       const callback = new URL(url);
-      callback.searchParams.set("code", "mock-once");
+      callback.searchParams.set(
+        strategy === "cancelAuth" ? "error_code" : "code",
+        strategy === "cancelAuth" ? "access_denied" : "mock-once",
+      );
       await route.fulfill({
         status: 302,
         headers: { location: callback.href },
@@ -155,6 +161,12 @@ try {
           { code: "SAVE_CONFLICT", message: "Changed", current },
           409,
         );
+      if (active === targetId)
+        assert.equal(
+          body.backupExisting,
+          true,
+          "transition requires durable server backup",
+        );
       const next = record(body.data, current.revision + 1);
       saves.set(active, next);
       receipts.set(body.operationId, next);
@@ -175,7 +187,21 @@ try {
       .click();
     console.log("AUTH STARTED", strategy);
     // Full navigation recreates the SDK and restores the durable snapshot.
-    if (strategy === "link") {
+    if (strategy === "cancelAuth") {
+      await page
+        .getByRole("button", { name: "RETURN TO GUEST GAME", exact: true })
+        .waitFor({ state: "visible" });
+      assert.equal(active, guestId);
+      assert.equal(saves.get(guestId).data.wallet, 75);
+      assert.equal(saves.get(targetId).data.wallet, 200);
+      assert.equal(receipts.size, 0);
+      await page
+        .getByRole("button", { name: "RETURN TO GUEST GAME", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "ACCOUNT", exact: true })
+        .waitFor({ state: "visible" });
+    } else if (strategy === "link") {
       await page.waitForURL((url) => !url.searchParams.has("code"));
       await page
         .getByRole("button", { name: "ACCOUNT", exact: true })
@@ -190,13 +216,45 @@ try {
       await page
         .getByRole("button", { name: "KEEP GOOGLE PROGRESS", exact: true })
         .waitFor({ state: "visible" });
+      assert.equal(
+        await page.getByRole("button", { name: "CANCEL", exact: true }).count(),
+        0,
+      );
+      if (strategy === "defer") {
+        await page
+          .getByRole("button", {
+            name: "DECIDE LATER / STAY SIGNED IN",
+            exact: true,
+          })
+          .click();
+        await page.waitForTimeout(100);
+        assert.equal(active, targetId);
+        assert.equal(saves.get(targetId).revision, 4);
+        assert.equal(saves.get(guestId).data.wallet, 75);
+        assert.equal(receipts.size, 0);
+        assert.equal(
+          await page.evaluate(() =>
+            Object.keys(localStorage).some(
+              (k) =>
+                k.startsWith("vaccoin.account-flow:") &&
+                localStorage.getItem(k).includes("transition"),
+            ),
+          ),
+          true,
+        );
+        await page.screenshot({path: "test-results/accounts-deferred-state.png"});
+        await page.reload();
+        await page
+          .getByRole("button", { name: "KEEP GOOGLE PROGRESS", exact: true })
+          .waitFor({ state: "visible" });
+      }
       await page.screenshot({
         path: `test-results/accounts-conflict-${strategy}.png`,
       });
       await page
         .getByRole("button", {
           name:
-            strategy === "cloud"
+            strategy === "cloud" || strategy === "defer"
               ? "KEEP GOOGLE PROGRESS"
               : strategy === "guest"
                 ? "KEEP GUEST PROGRESS"
@@ -204,10 +262,12 @@ try {
           exact: true,
         })
         .click();
-      if (strategy !== "cloud")
+      if (strategy !== "cloud" && strategy !== "defer") {
+        await page.screenshot({path: `test-results/accounts-confirm-${strategy}.png`});
         await page
           .getByRole("button", { name: "CONFIRM", exact: true })
           .click();
+      }
       await page
         .getByRole("button", { name: "ACCOUNT", exact: true })
         .waitFor({ state: "visible" });
@@ -223,7 +283,8 @@ try {
           "brick-red",
           "chrome",
         ]);
-      if (strategy === "cloud") assert.equal(saves.get(targetId).revision, 4);
+      if (strategy === "cloud" || strategy === "defer")
+        assert.equal(saves.get(targetId).revision, 4);
     }
     assert.deepEqual(errors, []);
     console.log(

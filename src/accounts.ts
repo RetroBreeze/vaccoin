@@ -57,17 +57,20 @@ export class Accounts {
       return;
     }
     this.busy = true;
+    const url = new URL(this.env.url());
+    let pending: { flowId: string; transition?: AccountTransition } | null =
+      null;
+    const callbackHash = new URLSearchParams(url.hash.slice(1));
+    const hasCallback =
+      ["sg_flow", "code", "error", "error_code"].some((key) =>
+        url.searchParams.has(key),
+      ) ||
+      callbackHash.has("error") ||
+      callbackHash.has("error_code");
     try {
-      const url = new URL(this.env.url());
-      let pending: { flowId: string; transition?: AccountTransition } | null =
-        null;
       const stored = this.env.storage.getItem(this.key);
       if (stored) pending = JSON.parse(stored);
-      if (
-        url.searchParams.has("sg_flow") ||
-        url.searchParams.has("code") ||
-        url.searchParams.has("error")
-      ) {
+      if (hasCallback) {
         const result = await this.game.players.handleAuthCallback(url.href);
         const transition = result.transitionId
           ? await this.game.saves.pendingAccountSwitch()
@@ -98,12 +101,41 @@ export class Accounts {
         this.open = true;
         this.message = "CHOOSE PROGRESS / BOTH COPIES ARE RETAINED";
       } else if (pending) {
+        if (pending.transition && this.status.isAnonymous) {
+          await this.game.players.cancelAuthFlow(pending.flowId);
+          this.transition = pending.transition;
+          this.workshop.resumeAfterAccount();
+          this.message = "SIGN-IN STOPPED / STILL GUEST / SNAPSHOT RETAINED";
+          this.open = true;
+        }
         this.env.storage.removeItem(this.key);
       }
     } catch (error) {
       this.open = true;
       this.report(error);
+      // A cancelled provider flow can resume only the verified original guest.
+      // Once Google replaced that session we deliberately have no guest credentials.
+      try {
+        await this.refresh();
+        if (
+          pending?.transition &&
+          this.status.isAnonymous &&
+          this.status.userId === pending.transition.sourcePlayerId
+        ) {
+          await this.game.players.cancelAuthFlow(pending.flowId);
+          this.transition = pending.transition;
+          this.env.storage.removeItem(this.key);
+          this.workshop.resumeAfterAccount();
+          this.message += " / STILL GUEST / SNAPSHOT RETAINED";
+        } else if (pending?.transition) {
+          await this.workshop.pauseForAccount();
+          this.message += " / VERIFY SIGNED-IN ACCOUNT BEFORE CONTINUING";
+        }
+      } catch {
+        /* Keep the marker and pause until identity can be verified. */
+      }
     } finally {
+      if (hasCallback) this.env.replace(url.origin + url.pathname);
       this.busy = false;
     }
   }
@@ -177,15 +209,19 @@ export class Accounts {
             : {}),
         },
       );
-      if (result.status === "cancelled") {
-        this.message = "CANCELLED / SAVES UNCHANGED / SNAPSHOT RETAINED";
+      if (result.status === "deferred") {
+        this.message =
+          "STILL SIGNED IN TO GOOGLE / DECISION PAUSED / GUEST COPY RETAINED";
         return;
       }
       await this.workshop.acceptAccountCloud();
       this.env.storage.removeItem(this.key);
       this.review = undefined;
       this.open = false;
-      this.message = "ACCOUNT READY / RECOVERY COPIES RETAINED";
+      this.message =
+        strategy === "keepCloud"
+          ? "GOOGLE PROGRESS READY / GUEST IMPORT SKIPPED / GUEST COPY RETAINED"
+          : "GOOGLE ACCOUNT READY / CLOUD BACKUP + GUEST COPY RETAINED";
     } catch (error) {
       this.report(error);
     } finally {

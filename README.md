@@ -23,6 +23,16 @@ npm test            # deterministic simulation and integration-boundary tests
 
 For a clean checkout with the committed lockfile, `npm ci` can replace `npm install`.
 
+The three `@supagame/*` dependencies are unpublished packages, so this repository
+includes versioned, integrity-locked tarballs in `vendor/`. A clean clone or
+Cloudflare Pages build can run `npm ci` without a sibling Supagame checkout.
+These snapshots were packed from [Supagame](https://github.com/RetroBreeze/supagame)
+commit `ca60518` (contracts/SDK 0.1.4 and CLI 0.1.6). The Admin CLI is a local
+developer tool requiring Node 24; it is not executed by the browser build.
+When updating Supagame, rebuild the packages, replace the corresponding vendor
+archives, regenerate `package-lock.json`, and verify `npm ci`, `npm test`, and
+`npm run build` before committing.
+
 ## Controls
 
 | Action              | Keyboard / mouse     | Mobile touch                                   | Standard gamepad                                 |

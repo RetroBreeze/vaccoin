@@ -13,6 +13,7 @@ try {
     isMobile: true,
     hasTouch: true,
   });
+  page.setDefaultTimeout(30000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await mockBackend(page, { savedName: true });

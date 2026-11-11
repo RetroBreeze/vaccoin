@@ -165,12 +165,16 @@ export async function enterCasino(page) {
   // Viewport suites control window sizes. The entry regression checks real gesture calls.
   await page.evaluate(() => {
     window.qaFullscreen = document.documentElement.requestFullscreen;
+    window.qaWebkitFullscreen = document.documentElement.webkitRequestFullscreen;
     document.documentElement.requestFullscreen = undefined;
+    document.documentElement.webkitRequestFullscreen = undefined;
   });
   await page.locator('#enter-casino').click();
   await page.locator('#entry-screen').waitFor({ state: 'hidden' });
   await page.evaluate(() => {
     document.documentElement.requestFullscreen = window.qaFullscreen;
+    document.documentElement.webkitRequestFullscreen = window.qaWebkitFullscreen;
     delete window.qaFullscreen;
+    delete window.qaWebkitFullscreen;
   });
 }

@@ -8,6 +8,9 @@ export function installEntryScreen(
 ) {
   const screen = document.getElementById("entry-screen")!;
   const button = document.getElementById("enter-casino") as HTMLButtonElement;
+  const displayHelp = document.getElementById("entry-display-help")!;
+  displayHelp.hidden = immersive.supported || immersive.standalone;
+  if (!displayHelp.hidden) displayHelp.textContent = immersive.fallbackMessage;
   let entered = false;
   button.addEventListener("click", () => {
     if (entered) return;

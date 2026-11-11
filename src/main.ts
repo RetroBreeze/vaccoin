@@ -98,27 +98,31 @@ async function boot() {
   let portableActive = false;
   const portrait = () => mobile && innerHeight > innerWidth;
   const controlsActive = () =>
-    !document.hidden && !portrait() && (locked || portableActive);
+    !document.hidden && !portrait() && !round.paused && (locked || portableActive);
   async function toggleFullscreen() {
     const ok = await immersive.toggle();
     displayMessage.hidden = ok;
-    displayMessage.textContent = ok
-      ? ""
-      : "Fullscreen unavailable. You can still play in this browser.";
+    displayMessage.textContent = ok ? "" : immersive.fallbackMessage;
   }
-  document
-    .querySelector("#rotate-fullscreen")!
-    .addEventListener("click", () => void immersive.enter());
-  document.addEventListener("fullscreenchange", () => {
-    const active = !!document.fullscreenElement;
-    if (!active) {
+  const rotateFullscreen = document.querySelector<HTMLButtonElement>("#rotate-fullscreen")!;
+  rotateFullscreen.hidden = !immersive.supported || immersive.standalone;
+  rotateFullscreen.addEventListener("click", () => {
+    void immersive.enter().then((ok) => {
+      displayMessage.hidden = ok;
+      displayMessage.textContent = ok ? "" : immersive.fallbackMessage;
+    });
+  });
+  const fullscreenChanged = () => {
+    if (!immersive.active) {
       try {
         screen.orientation?.unlock?.();
       } catch {
         /* Optional browser API. */
       }
     }
-  });
+  };
+  document.addEventListener("fullscreenchange", fullscreenChanged);
+  document.addEventListener("webkitfullscreenchange", fullscreenChanged);
   const profile = new DisplayName();
   nameInput.value = profile.name;
   namePanel.hidden = !!profile.name;
@@ -331,6 +335,7 @@ async function boot() {
     countdown = 60,
     error = "",
     requesting = false,
+    playRequest = 0,
     ignoreNextLook = false;
   const uiState: UIState = {
     phase: "title",
@@ -374,8 +379,15 @@ async function boot() {
     audio.motorUpdate(false, 0);
   }
   function pauseControls() {
+    playRequest++;
+    round.pause(performance.now());
     portableActive = false;
+    locked = false;
+    intent.cancel();
+    requesting = false;
+    accumulator = 0;
     stopInput();
+    audio.updateMusic(false);
     if (document.pointerLockElement) document.exitPointerLock();
   }
   pauseButton.addEventListener("click", pauseControls);
@@ -416,13 +428,25 @@ async function boot() {
     audio.start();
     status.textContent = "Round started. 60 seconds.";
     error = "";
+    last = performance.now();
+  }
+  function resumeRound() {
+    const now = performance.now();
+    round.resume(now);
+    accumulator = 0;
+    last = now;
   }
   function captureAcquired() {
     locked = document.pointerLockElement === canvas;
     if (!locked) return;
     const action = intent.acquired(round.phase);
+    if (document.hidden || (action === "none" && round.paused)) {
+      pauseControls();
+      return;
+    }
     if (action !== "none") ignoreNextLook = true;
     if (action === "start") startRound();
+    else if (action === "resume") resumeRound();
     error = "";
     requesting = false;
   }
@@ -455,12 +479,15 @@ async function boot() {
       requesting = true;
       intent.cancel();
       void audio.unlock();
-      // Fullscreen and orientation changes can blur the page. Establish the
-      // round and controls only after those display transitions have settled.
-      if (source === "touch") await immersive.enter();
+      // Entry owns fullscreen. Resuming after a tab switch must not launch a
+      // second display transition that can blur and pause the game again.
+      const request = ++playRequest;
+      await immersive.whenSettled();
+      if (request !== playRequest) return;
       requesting = false;
       if (document.hidden) return;
       if (restart || round.phase !== "playing") startRound();
+      else resumeRound();
       portableActive = true;
       error = "";
       return;
@@ -495,8 +522,8 @@ async function boot() {
   document.addEventListener("pointerlockchange", () => {
     locked = document.pointerLockElement === canvas;
     if (!locked) {
-      stopInput();
-      if (controlMode === "mouse") portableActive = false;
+      if (controlMode === "mouse") pauseControls();
+      else stopInput();
     } else captureAcquired();
   });
   document.addEventListener("pointerlockerror", () => {
@@ -578,7 +605,11 @@ async function boot() {
     if (controlsActive()) keys.add(e.code);
   });
   document.addEventListener("keyup", (e) => keys.delete(e.code));
-  window.addEventListener("blur", pauseControls);
+  window.addEventListener("blur", () => {
+    if (immersive.transitioning && !document.hidden) return;
+    pauseControls();
+  });
+  window.addEventListener("pagehide", pauseControls);
   function finishIfExpired() {
     if (!round.tick(performance.now())) return;
     pauseControls();
@@ -591,7 +622,6 @@ async function boot() {
   document.addEventListener("visibilitychange", () => {
     leaderboard.achievements.update(round.phase, document.hidden);
     if (document.hidden) pauseControls();
-    finishIfExpired();
   });
   setInterval(finishIfExpired, 250);
   window.addEventListener("resize", () => {
@@ -633,7 +663,7 @@ async function boot() {
     const elapsed = Math.min((now - last) / 1000, 0.1);
     const raw = now - last;
     last = now;
-    finishIfExpired();
+    if (document.hidden) return;
     let pads: (Gamepad | null)[] = [];
     try {
       pads = Array.from(navigator.getGamepads?.() ?? []);
@@ -651,8 +681,11 @@ async function boot() {
     }
     rotatePrompt.hidden = !portrait() || round.phase !== "playing" || accounts.open;
     if (portrait() && (portableActive || locked)) pauseControls();
+    if (round.phase === "playing" && !controlsActive()) round.pause(now);
+    finishIfExpired();
     const captured = round.phase === "playing" && controlsActive();
     const active = captured && round.countdown(now) === 0;
+    view.observeFrame(raw, active);
     if (captured && !active) vacuum.update(elapsed, now / 1000, false, 0, 0);
     audio.updateMusic(captured);
     pauseButton.hidden = round.phase !== "playing" || !captured;
@@ -742,8 +775,7 @@ async function boot() {
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
     uiState.locked = controlsActive();
-    uiState.time =
-      round.phase === "playing" ? Math.max(0, (now - round.startedAt) / 1000) : now / 1000;
+    uiState.time = round.phase === "playing" ? 60 - round.remaining(now) : now / 1000;
     uiState.muted = audio.muted;
     uiState.entries = leaderboard.entries;
     uiState.error = error;
@@ -759,7 +791,7 @@ async function boot() {
     updateCasinoVisibility(view.scene,view.camera.position.y);
     atmosphere.update(now / 1000, destructibles.objects);
     spectacle.update(now / 1000);
-    // Menus share the casino view; gameplay always restores its full render resolution.
+    // Menus share the casino view; gameplay uses the adaptive device pixel budget.
     if (entered() && !document.hidden && (menuBackground || controlsActive() || view.needsFrame))
       view.draw(now, reducedMotion.matches);
     uiState.menuCovered = workshopUI.open || accounts.open;
@@ -794,6 +826,7 @@ async function boot() {
           score: round.score,
           remaining: round.remaining(performance.now()),
           countdown: round.countdown(performance.now()),
+          paused: round.paused,
           best: leaderboard.best,
           coins: coins.count,
           alive: coins.countAlive(),

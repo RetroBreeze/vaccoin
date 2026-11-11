@@ -130,6 +130,14 @@ canvas {
   color: var(--gold);
   animation: prompt-glow 1.6s steps(2, end) infinite;
 }
+#entry-display-help {
+  max-width: 430px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
 @keyframes logo-beat {
   0%,
   50%,

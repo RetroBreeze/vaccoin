@@ -1,0 +1,12 @@
+{
+  "id": "/",
+  "name": "VACCOIN",
+  "short_name": "VACCOIN",
+  "description": "One vacuum. One minute. An unreasonable amount of gold.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#171018",
+  "theme_color": "#142a36"
+}

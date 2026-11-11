@@ -10,7 +10,7 @@ import {
 import { Player } from "../src/player";
 
 describe("round clock and scoring", () => {
-  it("expires against elapsed time even after a long hidden interval", () => {
+  it("expires against elapsed time when the round is not paused", () => {
     const r = new Round();
     r.start(1000);
     r.collect(800);

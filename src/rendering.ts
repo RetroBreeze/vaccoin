@@ -1,18 +1,19 @@
 import * as T from "three";
+import { AdaptiveResolution, renderPixelRatio } from "./rendering-policy";
 export class Rendering {
   readonly renderer: T.WebGLRenderer;
   private menuMode = false;
   private lastBackgroundFrame = -Infinity;
+  private readonly resolution = new AdaptiveResolution();
   readonly scene = new T.Scene();
   readonly camera = new T.PerspectiveCamera(78, 1, 0.08, 230);
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new T.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: false,
       alpha: false,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     this.renderer.info.autoReset = false;
     this.renderer.outputColorSpace = T.SRGBColorSpace;
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -38,19 +39,28 @@ export class Rendering {
     this.menuMode = menuMode;
     this.resize();
   }
+  observeFrame(frameMs: number, active: boolean) {
+    if (this.resolution.observeFrame(frameMs, active && !this.menuMode)) {
+      this.resize();
+    }
+  }
   resize() {
     this.lastBackgroundFrame = -Infinity;
-    const aspect = innerWidth / innerHeight;
-    const ratio = this.menuMode
-      ? Math.min(
-          window.devicePixelRatio || 1,
-          1,
-          960 / innerWidth,
-          540 / innerHeight,
-        )
-      : window.devicePixelRatio || 1;
+    const width = Math.max(1, innerWidth);
+    const height = Math.max(1, innerHeight);
+    const aspect = width / height;
+    const ratio = renderPixelRatio(
+      {
+        width,
+        height,
+        devicePixelRatio: window.devicePixelRatio || 1,
+        mobile: window.matchMedia("(pointer: coarse)").matches,
+        menu: this.menuMode,
+      },
+      this.resolution.scale,
+    );
     this.renderer.setPixelRatio(ratio);
-    this.renderer.setSize(innerWidth, innerHeight, false);
+    this.renderer.setSize(width, height, false);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }

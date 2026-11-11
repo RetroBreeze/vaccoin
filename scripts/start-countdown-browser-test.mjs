@@ -27,11 +27,14 @@ try {
   await mobile.clock.pauseAt(new Date(Date.now() + 1000));
   await ready(mobile);
   await mobile.evaluate(() => {
-    document.documentElement.requestFullscreen = () =>
-      new Promise((resolve) => {
+    window.fullscreenCalls = 0;
+    document.documentElement.requestFullscreen = () => {
+      window.fullscreenCalls++;
+      return new Promise((resolve) => {
         window.dispatchEvent(new Event("blur"));
         setTimeout(resolve, 150);
       });
+    };
   });
   await mobile.locator("#play").tap();
   await mobile.clock.fastForward(250);
@@ -72,6 +75,41 @@ try {
     scale: "css",
   });
   assert.equal(start.remaining, 60);
+  // Reproduce switching apps during the opening countdown, then returning.
+  await mobile.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("pagehide"));
+  });
+  const away = await snapshot(mobile);
+  await mobile.clock.fastForward(75000);
+  assert.equal((await snapshot(mobile)).phase, "playing");
+  assert.equal((await snapshot(mobile)).remaining, 60);
+  assert.equal((await snapshot(mobile)).countdown, away.countdown);
+  await mobile.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => false,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("pageshow"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await mobile.clock.fastForward(20);
+  assert.equal((await snapshot(mobile)).controlsActive, false);
+  assert.equal(await mobile.locator("#pause-menu").isVisible(), true);
+  await mobile.locator("#play").tap();
+  await mobile.clock.fastForward(20);
+  assert.equal((await snapshot(mobile)).controlsActive, true);
+  assert.equal((await snapshot(mobile)).countdown, away.countdown);
+  assert.equal(
+    await mobile.evaluate(() => window.fullscreenCalls),
+    0,
+    "Play and Resume must not launch a fullscreen transition",
+  );
   await mobile.keyboard.down("w");
   await mobile.evaluate(() => {
     document.dispatchEvent(new MouseEvent("mousedown", { button: 0 }));
@@ -112,6 +150,13 @@ try {
   await mobile.clock.fastForward(20);
   assert.equal(await mobile.locator("#pause-menu").isVisible(), true);
   assert.equal(await mobile.locator("#pause-menu .menu-note").count(), 0);
+  const pausedRemaining = (await snapshot(mobile)).remaining;
+  await mobile.clock.fastForward(10000);
+  assert.equal(
+    (await snapshot(mobile)).remaining,
+    pausedRemaining,
+    "tab blur freezes the running round as well as the countdown",
+  );
   const pauseBox = await mobile
     .locator("#pause-menu .menu-content")
     .boundingBox();
@@ -175,7 +220,7 @@ try {
   await desktop.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: fullscreen transition starts active, READY/GET SET/GOLD countdown freezes movement/scoring with timer at 60, double-tap jumping, centred pause, desktop capture survives menu transition, later blur/Escape pause, Resume continues",
+    "PASS: start/resume without extra fullscreen, app switch freezes countdown and clock, explicit Resume, double-tap jumping, centred pause, desktop capture and Escape",
   );
 } finally {
   await browser.close();

@@ -35,21 +35,21 @@ archives, regenerate `package-lock.json`, and verify `npm ci`, `npm test`, and
 
 ## Controls
 
-| Action              | Keyboard / mouse     | Mobile touch                                   | Standard gamepad                                 |
-| ------------------- | -------------------- | ---------------------------------------------- | ------------------------------------------------ |
-| Move / strafe       | WASD                 | Left thumbstick                                | Left stick                                       |
-| Look                | Mouse                | Drag on right side                             | Right stick                                      |
-| Vacuum              | Hold left mouse      | Hold VAC                                       | Hold right trigger                               |
-| Jump                | Space                | Tap JUMP                                       | A / Cross                                        |
-| Play / resume       | Click button / Enter | Tap button                                     | Start (A / Cross also starts from title/results) |
-| Stop controls       | Escape               | II button                                      | Start                                            |
-| Restart immediately | R                    | Play Again after results                       | A / Cross after results                          |
-| Fullscreen          | F / top-right button | Automatic request on Play, or top-right button | Use fullscreen button before playing             |
-| Toggle sound        | M / sound button     | Sound button on menus                          | Sound button on menus                            |
+| Action              | Keyboard / mouse     | Mobile touch                                      | Standard gamepad                                 |
+| ------------------- | -------------------- | ------------------------------------------------- | ------------------------------------------------ |
+| Move / strafe       | WASD                 | Swipe and hold on left side                       | Left stick                                       |
+| Look                | Mouse                | Drag on right side                                | Right stick                                      |
+| Vacuum              | Hold left mouse      | Hold right side                                   | Hold right trigger                               |
+| Jump                | Space                | Double tap either control area                    | A / Cross                                        |
+| Play / resume       | Click button / Enter | Tap button                                        | Start (A / Cross also starts from title/results) |
+| Pause               | Escape               | II button                                         | Start                                            |
+| Restart immediately | R                    | Play Again after results                          | A / Cross after results                          |
+| Fullscreen          | F / entry screen     | Automatic request on entry; Home Screen on iPhone | Enter before playing                             |
+| Toggle sound        | M / main-menu button | Sound button on main menu                         | Sound button on main menu                        |
 
-Fullscreen is optional. Supported mobile browsers lock to landscape after entering fullscreen; other browsers show a rotate prompt in portrait. Input is suspended on rotation, controller disconnect, loss of focus or hidden tabs. Resume explicitly to continue. Mouse and touch can take over after disconnecting a controller. Gamepad sticks have a dead zone, and jump/menu actions require a fresh button press. Touch controls support simultaneous movement, looking and suction. Drag while holding VAC or JUMP to aim, including outside the button bounds; VAC stays active until release, and dragging does not repeat jumps. Pointer cancellation clears held inputs.
+Fullscreen is optional. Supported mobile browsers request landscape after entering fullscreen; other browsers show a rotate prompt in portrait. On iPhone, use Safari’s Share → Add to Home Screen and launch VACCOIN from there for a standalone view without browser bars. Input is suspended on rotation, controller disconnect, loss of focus or hidden tabs. Resume explicitly to continue. Mouse and touch can take over after disconnecting a controller. Gamepad sticks have a dead zone, and jump/menu actions require a fresh button press. Touch controls support simultaneous movement, looking and suction. Drag while holding VAC or JUMP to aim, including outside the button bounds; VAC stays active until release, and dragging does not repeat jumps. Pointer cancellation clears held inputs.
 
-The **60-second clock keeps running** when you stop controls, release the mouse, rotate to portrait, disconnect a controller, switch tabs, or lose focus. Movement and suction stop until you resume. A restart abandons the previous run; only completed rounds update your best. There is no pause exploit.
+The countdown and **60-second clock pause** when you stop controls, release the mouse, rotate to portrait, disconnect a controller, switch tabs, or lose focus. Return to the game and choose Resume to continue from the same remaining time. A restart abandons the previous run; only completed rounds update your best.
 
 Start by sweeping the valuables in the entrance. Hold suction on slot machines until they burst. Explore the slot gallery, roulette hall and blackjack salon; follow signs to the two stair cores for the upper poker rooms, high-limit salon and pearl lounge, or descend to the cashier, counting rooms and bullion vault. The upper promenade overlooks the atrium, with a deliberate drop shortcut at its southern edge. No lifts or door timers interrupt a run.
 
@@ -66,7 +66,6 @@ Coins score **1**, large coins **10**, dollar bills **25**, gold bars **100**, p
 - Accounts, workshop saves, achievements, controls and leaderboard integration retained.
 
 Run `python scripts/extract-casino-assets.py` to reproduce the runtime assets from the archives in `public/assets`. Source provenance is recorded in `public/assets/casino/provenance.json`. Production builds exclude the large ZIP archives; source copies remain intact.
-
 
 ## Supagame leaderboards
 
@@ -87,7 +86,6 @@ CASINO_TEST_ORIGIN=http://localhost:5173 node scripts/casino-browser-test.mjs
 
 This checks weighted collection, actual staircase movement, slot bursts, reset and expiry, with screenshots of each floor. Historical mint-specific browser scripts remain as references; their old teleports and crate expectations do not describe the casino. See [casino verification and release notes](docs/casino-verification.md).
 
-
 Install Chromium with `npx playwright install chromium` if needed. Development-only QA helpers are enabled with `?qa` and removed from production builds. `node scripts/production-test.mjs` checks the production preview on port 4173, including asset loading, pointer lock and restart. Screenshots and JSON reports are written to ignored `test-results/`.
 
 ## Project map
@@ -97,7 +95,6 @@ Install Chromium with `npx playwright install chromium` if needed. Development-o
 ## Assets
 
 Casino architecture, furniture, slot machines and gaming tables come from the three user-supplied PSX asset packs. Their source archives are preserved in `public/assets`; `casino/provenance.json` maps every extracted model and texture to its archive. The packs do not include a standalone license file in the inspected archive paths, so no new license claim is made here. Bill, bar, pearl and diamond collectible geometry is native Three.js geometry; the existing KayKit coin remains.
-
 
 KayKit Bits Bundle 2 by **Kay Lousberg** (CC0). Selected glTF files, original buffers and palette textures are copied into `public/assets/`; the full supplied source bundle remains untouched and is excluded from Git/build output. License: `public/assets/KayKit-LICENSE.txt`.
 

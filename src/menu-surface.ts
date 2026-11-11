@@ -27,7 +27,17 @@ export class MenuSurface {
   private place(node: HTMLElement, parent: HTMLElement) {
     const previous = this.positions.get(parent);
     const next = previous ? previous.nextSibling : parent.firstChild;
-    if (next !== node) parent.insertBefore(node, next);
+    if (next !== node) {
+      const focused = document.activeElement;
+      parent.insertBefore(node, next);
+      // Moving a group also blurs its focused descendant in older browsers.
+      if (
+        focused instanceof HTMLElement &&
+        node.contains(focused) &&
+        document.activeElement !== focused
+      )
+        focused.focus({ preventScroll: true });
+    }
     this.positions.set(parent, node);
   }
   node<K extends keyof HTMLElementTagNameMap>(

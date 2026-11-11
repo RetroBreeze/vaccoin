@@ -7,6 +7,14 @@
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
     <meta name="theme-color" content="#142a36" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VACCOIN" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta
       name="description"
       content="One vacuum. One minute. An unreasonable amount of gold. A fast, pixelated 3D arcade game."
@@ -27,9 +35,11 @@
         type="button"
         disabled
         aria-label="Click or tap to start"
+        aria-describedby="entry-display-help"
       >
         <img class="entry-logo" src="/assets/logo.png" alt="Vaccoin" />
         <span class="entry-prompt">LOADING…</span>
+        <span id="entry-display-help" hidden></span>
       </button>
     </section>
     <canvas id="world" aria-label="Vaccoin 3D arena"></canvas

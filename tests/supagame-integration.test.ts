@@ -1,3 +1,4 @@
+import { TOTAL_POINTS } from "../src/coin-counts";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   AuthenticationError,
@@ -190,7 +191,7 @@ it("does not send a pending attempt under a different restored identity", async 
   expect(board.status).toContain("UNAVAILABLE");
 });
 
-it.each([NaN, Infinity, -1, 1.2, Number.MAX_SAFE_INTEGER + 1, 19201])(
+it.each([NaN, Infinity, -1, 1.2, Number.MAX_SAFE_INTEGER + 1, (TOTAL_POINTS + 1)])(
   "rejects invalid coin total %s without requests",
   async (score) => {
     const { game, board } = fixture();

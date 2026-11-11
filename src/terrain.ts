@@ -1,3 +1,10 @@
+import {
+  casinoSurfaces,
+  casinoWalls,
+  furnitureSolids,
+  columnSolids,
+  CASINO_BOUNDS,
+} from "./casino-layout";
 export interface Surface {
   id: string;
   x0: number;
@@ -8,76 +15,35 @@ export interface Surface {
   endY?: number;
   color: number;
 }
-export const surfaces: Surface[] = [
-  { id: "mint", x0: -28, x1: 28, z0: -10, z1: 26, y: 0, color: 0x597c85 },
-  {
-    id: "vault-roof",
-    x0: -18,
-    x1: 18,
-    z0: -30,
-    z1: -10,
-    y: 0,
-    color: 0x597c85,
-  },
-  { id: "vault", x0: -28, x1: 28, z0: -30, z1: -10, y: -6, color: 0x635f91 },
-  {
-    id: "west-descent",
-    x0: -28,
-    x1: -18,
-    z0: -24,
-    z1: -10,
-    y: -6,
-    endY: 0,
-    color: 0x9d79be,
-  },
-  {
-    id: "east-descent",
-    x0: 18,
-    x1: 28,
-    z0: -24,
-    z1: -10,
-    y: -6,
-    endY: 0,
-    color: 0x9d79be,
-  },
-  {
-    id: "west-rise",
-    x0: -28,
-    x1: -18,
-    z0: 8,
-    z1: 24,
-    y: 6,
-    endY: 0,
-    color: 0x3c9e9f,
-  },
-  {
-    id: "east-rise",
-    x0: 18,
-    x1: 28,
-    z0: 8,
-    z1: 24,
-    y: 6,
-    endY: 0,
-    color: 0x3c9e9f,
-  },
-  {
-    id: "west-gallery",
-    x0: -28,
-    x1: -18,
-    z0: -10,
-    z1: 8,
-    y: 6,
-    color: 0x3c9e9f,
-  },
-  { id: "east-gallery", x0: 18, x1: 28, z0: -10, z1: 8, y: 6, color: 0x3c9e9f },
-  { id: "skybridge", x0: -18, x1: 18, z0: -10, z1: -2, y: 6, color: 0x4ca5a3 },
-];
-export const obstacles = [
-  { x0: -9, x1: -7, z0: 0, z1: 2, y0: 0, y1: 10 },
-  { x0: 7, x1: 9, z0: 0, z1: 2, y0: 0, y1: 10 },
-  { x0: -9, x1: -7, z0: -24, z1: -22, y0: -6, y1: 2 },
-  { x0: 7, x1: 9, z0: -24, z1: -22, y0: -6, y1: 2 },
-];
+export const surfaces: Surface[] = casinoSurfaces;
+export const obstacles = [...casinoWalls, ...furnitureSolids, ...columnSolids];
+// Static broad phase: dense furniture should not make every moving coin scan
+// the entire building. Padding covers the largest normal body/coin query radius.
+function spatialIndex<
+  T extends { x0: number; x1: number; z0: number; z1: number },
+>(items: T[], padding: number) {
+  const cells = new Map<string, T[]>();
+  for (const item of items)
+    for (
+      let x = Math.floor((item.x0 - padding) / 8);
+      x <= Math.floor((item.x1 + padding) / 8);
+      x++
+    )
+      for (
+        let z = Math.floor((item.z0 - padding) / 8);
+        z <= Math.floor((item.z1 + padding) / 8);
+        z++
+      ) {
+        const key = `${x}:${z}`;
+        if (!cells.has(key)) cells.set(key, []);
+        cells.get(key)!.push(item);
+      }
+  return (x: number, z: number) =>
+    cells.get(`${Math.floor(x / 8)}:${Math.floor(z / 8)}`) ?? [];
+}
+const localObstacles = spatialIndex(obstacles, 1),
+  localSurfaces = spatialIndex(surfaces, 0);
+
 export function contains(s: Surface, x: number, z: number, pad = 0) {
   return (
     x >= s.x0 - pad && x <= s.x1 + pad && z >= s.z0 - pad && z <= s.z1 + pad
@@ -96,12 +62,12 @@ export function landingHeight(
   step = 0.22,
 ) {
   let best = -Infinity;
-  for (const s of surfaces) {
+  for (const s of localSurfaces(x, z)) {
     if (!contains(s, x, z)) continue;
     const y = surfaceHeight(s, z);
     if (y <= previousY + step && nextY <= y && y > best) best = y;
   }
-  for (const b of obstacles) {
+  for (const b of localObstacles(x, z)) {
     if (
       x >= b.x0 &&
       x <= b.x1 &&
@@ -122,7 +88,7 @@ export function ceilingHeight(
   newHead: number,
 ) {
   let best = Infinity;
-  for (const s of surfaces) {
+  for (const s of localSurfaces(x, z)) {
     if (!contains(s, x, z)) continue;
     const y = surfaceHeight(s, z) - 0.6;
     if (oldHead <= y && newHead > y) best = Math.min(best, y);
@@ -130,8 +96,14 @@ export function ceilingHeight(
   return best;
 }
 export function blockedBody(x: number, z: number, y: number, r = 0.38) {
-  if (x < -28 + r || x > 28 - r || z < -30 + r || z > 26 - r) return true;
-  for (const b of obstacles)
+  if (
+    x < CASINO_BOUNDS.x0 + r ||
+    x > CASINO_BOUNDS.x1 - r ||
+    z < CASINO_BOUNDS.z0 + r ||
+    z > CASINO_BOUNDS.z1 - r
+  )
+    return true;
+  for (const b of r <= 1 ? localObstacles(x, z) : obstacles)
     if (
       x > b.x0 - r &&
       x < b.x1 + r &&
@@ -141,7 +113,7 @@ export function blockedBody(x: number, z: number, y: number, r = 0.38) {
       y < b.y1
     )
       return true;
-  for (const s of surfaces) {
+  for (const s of localSurfaces(x, z)) {
     if (!contains(s, x, z)) continue;
     const top = surfaceHeight(s, z);
     if (y < top - 0.25 && y + 1.6 > top - 0.6) return true;
@@ -205,11 +177,15 @@ export function lineBlocked(
   return false;
 }
 export function zone(y: number) {
-  return y < -2 ? "THE UNDERVAULT" : y > 3 ? "SKY GALLERY" : "THE MINT";
+  return y < -2.5
+    ? "SERVICE CONCOURSE"
+    : y > 2.5
+      ? "UPPER PROMENADE"
+      : "GRAND ATRIUM";
 }
 
 export function coinSolid(x: number, y: number, z: number, r = 0.12) {
-  for (const b of obstacles)
+  for (const b of r <= 1 ? localObstacles(x, z) : obstacles)
     if (
       x > b.x0 - r &&
       x < b.x1 + r &&
@@ -219,7 +195,7 @@ export function coinSolid(x: number, y: number, z: number, r = 0.12) {
       y < b.y1 + r
     )
       return true;
-  for (const s of surfaces)
+  for (const s of localSurfaces(x, z))
     if (contains(s, x, z)) {
       const top = surfaceHeight(s, z);
       if (y < top + r && y > top - 0.6 - r) return true;

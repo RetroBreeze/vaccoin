@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeDisplayName } from "./display-name";
 import {
   AccountError,
   SaveConflictError,
@@ -19,6 +21,8 @@ interface Environment {
 export class Accounts {
   status: AccountStatus = { userId: null, isAnonymous: false, providers: [] };
   message = "PLAY AS A GUEST OR SIGN IN";
+  email = "";
+  googleDisplayName = "";
   busy = false;
   open = false;
   needsReview = false;
@@ -36,6 +40,7 @@ export class Accounts {
       replace: (url) => history.replaceState(null, "", url),
       storage: localStorage,
     },
+    private auth?: Pick<SupabaseClient["auth"], "getUser">,
   ) {
     this.key = `vaccoin.account-flow:${namespace}`;
   }
@@ -68,6 +73,24 @@ export class Accounts {
   }
   async refresh() {
     if (this.game) this.status = await this.game.players.getAuthStatus();
+    this.email = "";
+    this.googleDisplayName = "";
+    if (!this.auth || !this.status.userId || this.status.isAnonymous) return;
+    const { data, error } = await this.auth.getUser();
+    if (error || data.user?.id !== this.status.userId) return;
+    const google = data.user.identities?.find(
+      (identity) => identity.provider === "google",
+    )?.identity_data;
+    this.email = google?.email || data.user.email || "";
+    if (this.status.providers.includes("google")) {
+      const name =
+        google?.full_name ??
+        google?.name ??
+        data.user.user_metadata.full_name ??
+        data.user.user_metadata.name;
+      this.googleDisplayName =
+        typeof name === "string" ? (normalizeDisplayName(name) ?? "") : "";
+    }
   }
   async initialize() {
     if (!this.game) {

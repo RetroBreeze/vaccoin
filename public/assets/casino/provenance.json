@@ -1,0 +1,251 @@
+{
+  "chair": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Chair_Casino_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Fabric_Red_01_Quarkery.png"
+    ],
+    "bytes": 48060
+  },
+  "lounge-chair": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Chair_VelvetLounge_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Fabric_Red_01_Quarkery.png"
+    ],
+    "bytes": 36772
+  },
+  "palm": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Palm_Large_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Plant_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Ceramic_01_Quarkery.png"
+    ],
+    "bytes": 118416
+  },
+  "lamp": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Lamp_TableOrnate_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Lights_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Ceramic_01_Quarkery.png"
+    ],
+    "bytes": 39604
+  },
+  "cocktail": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Table_CocktailRound_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png"
+    ],
+    "bytes": 39792
+  },
+  "trash": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Trash_Brass_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png"
+    ],
+    "bytes": 22368
+  },
+  "doorframe": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_DoorFrame_DoubleOrnate_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Door_Frames_01_Quarkery.png"
+    ],
+    "bytes": 29304
+  },
+  "railing": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Exterior_Phase3/Exports/GLB/Quarkery/CAS_EXT_Balcony_Railing_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Exterior_Phase3/Textures/Quarkery/CAS_EXT_Decor_01_Quarkery.png"
+    ],
+    "bytes": 12080
+  },
+  "wall": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Wall_Wallpaper_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Trim_WallInterior_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Trim_WallInterior_02_Quarkery.png"
+    ],
+    "bytes": 38200
+  },
+  "panel": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Wall_WoodPanel_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Trim_WallInterior_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Trim_WallInterior_02_Quarkery.png"
+    ],
+    "bytes": 48884
+  },
+  "carpet": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Floor_Carpet_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Floor_Carpet_01_Quarkery.png"
+    ],
+    "bytes": 9316
+  },
+  "marble": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Floor_Marble_Dark_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Floor_MarbleDark_01_Quarkery.png"
+    ],
+    "bytes": 9868
+  },
+  "ceiling": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Ceiling_Coffered_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Ceiling_Plaster_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Ceiling_Ornate_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Ceiling_Detail_01_Quarkery.png"
+    ],
+    "bytes": 61128
+  },
+  "column": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Exports/GLB/Quarkery/CAS_Column_Ornate_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Textures/Quarkery/CAS_Column_Ornate_01_Quarkery.png"
+    ],
+    "bytes": 36680
+  },
+  "sofa": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Sofa_TwoSeat_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Fabric_Teal_01_Quarkery.png"
+    ],
+    "bytes": 49000
+  },
+  "coffee": {
+    "palette": "Quarkery",
+    "archive": "Casino_PSX_Asset_Pack.zip",
+    "source": "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Exports/GLB/Quarkery/CAS_PROP_Table_CoffeeMarble_01_Quarkery.glb",
+    "textures": [
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Frame_01_Quarkery.png",
+      "Casino_PSX_Asset_Pack/Casino_Props_Phase4/Textures/Quarkery/CAS_PROP_Stone_01_Quarkery.png"
+    ],
+    "bytes": 19312
+  },
+  "slot-gold": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Slot_Machines_v1.0.zip",
+    "source": "PSX_Casino_Slot_Machines/Exports/GLB/Quarkery/CAS_SLOT_GoldenFortune_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Trim_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Lights_GoldenFortune_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Glass_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Reels_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Cab_GoldenFortune_01_Quarkery.png"
+    ],
+    "bytes": 163240
+  },
+  "slot-classic": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Slot_Machines_v1.0.zip",
+    "source": "PSX_Casino_Slot_Machines/Exports/GLB/Quarkery/CAS_SLOT_LuckySeven_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Trim_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Lights_LuckySeven_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Lights_LuckySeven_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Glass_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Reels_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Cab_LuckySeven_01_Quarkery.png"
+    ],
+    "bytes": 150148
+  },
+  "slot-neon": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Slot_Machines_v1.0.zip",
+    "source": "PSX_Casino_Slot_Machines/Exports/GLB/Quarkery/CAS_SLOT_NeonNights_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Lights_NeonNights_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Trim_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Glass_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Reels_01_Quarkery.png",
+      "PSX_Casino_Slot_Machines/Textures/Quarkery/CAS_SLOT_Cab_NeonNights_01_Quarkery.png"
+    ],
+    "bytes": 161880
+  },
+  "roulette": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Table_Games_v1.0.zip",
+    "source": "PSX_Casino_Table_Games/Exports/GLB/Quarkery/CAS_TABLE_Roulette_European_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Frame_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Felt_Roulette_European_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_WoodTop_01_Quarkery.png"
+    ],
+    "bytes": 80620
+  },
+  "poker": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Table_Games_v1.0.zip",
+    "source": "PSX_Casino_Table_Games/Exports/GLB/Quarkery/CAS_TABLE_Poker_Luxury_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Frame_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Felt_Poker_Luxury_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_WoodTop_01_Quarkery.png"
+    ],
+    "bytes": 141508
+  },
+  "blackjack": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Table_Games_v1.0.zip",
+    "source": "PSX_Casino_Table_Games/Exports/GLB/Quarkery/CAS_TABLE_Blackjack_Classic_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Frame_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Felt_Blackjack_Classic_01_Quarkery.png"
+    ],
+    "bytes": 118108
+  },
+  "cash-table": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Table_Games_v1.0.zip",
+    "source": "PSX_Casino_Table_Games/Exports/GLB/Quarkery/CAS_TABLE_Baccarat_Mini_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Frame_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Felt_Baccarat_Mini_01_Quarkery.png"
+    ],
+    "bytes": 120588
+  },
+  "wheel": {
+    "palette": "Quarkery",
+    "archive": "PSX_Casino_Table_Games_v1.0.zip",
+    "source": "PSX_Casino_Table_Games/Exports/GLB/Quarkery/CAS_PROP_RouletteWheel_European_01_Quarkery.glb",
+    "textures": [
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Accessories_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Wheel_European_01_Quarkery.png",
+      "PSX_Casino_Table_Games/Textures/Quarkery/CAS_TG_Frame_01_Quarkery.png"
+    ],
+    "bytes": 178972
+  }
+}

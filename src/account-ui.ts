@@ -5,6 +5,7 @@ import { pixelText, textWidth } from "./pixel-font";
 import { emptyProgress, validateProgress } from "./workshop-state";
 /** Native hit targets mirror Canvas controls for keyboard/touch accessibility. */
 export class AccountUI {
+  private email = document.createElement("div");
   private deletionNotice = document.createElement("div");
   private buttons = new Map<string, HTMLButtonElement>();
   private confirm?: SwitchStrategy | "signOut" | "deleteSave";
@@ -17,6 +18,20 @@ export class AccountUI {
     this.deletionNotice.textContent = "Delete Cloud Save removes cosmetic purchases and selections, wallet, total coins earned, completed runs, mute preference and saved operation records. Local saves and pending uploads are discarded. Leaderboards, achievements and your account remain unaffected. Historical backups may remain recoverable: up to five revisions for 30 days. This is not permanent erasure. A reset marker remains to block old uploads. Reload other devices with the updated game before playing. Choose Start Fresh after deletion.";
     Object.assign(this.deletionNotice.style, {position: "fixed", left: "-10000px", width: "1px", height: "1px", overflow: "hidden"});
     document.body.append(this.deletionNotice);
+    this.email.id = "account-email";
+    Object.assign(this.email.style, {
+      position: "fixed",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "calc(100% - 32px)",
+      textAlign: "center",
+      color: "#8cf0d1",
+      fontSize: "clamp(10px, 1.7vh, 16px)",
+      overflowWrap: "anywhere",
+      zIndex: "20",
+      display: "none",
+    });
+    document.body.append(this.email);
     const actions: Record<string, () => void> = {
       deleteSave: () => { this.confirm = "deleteSave"; },
       startFresh: () => void account.startFresh(),
@@ -78,6 +93,10 @@ export class AccountUI {
     if (this.confirm === "deleteSave") confirmButton.setAttribute("aria-describedby", this.deletionNotice.id);
     else confirmButton.removeAttribute("aria-describedby");
     for (const b of this.buttons.values()) b.style.display = "none";
+    this.email.textContent = this.account.email;
+    this.email.style.display =
+      this.account.open && this.account.email ? "block" : "none";
+    this.email.style.top = `${((this.confirm ? 65 : this.account.review ? 235 : 175) / 540) * 100}%`;
     const { ctx: c, w } = this.ui,
       cx = w / 2;
     const text = (

@@ -4,7 +4,7 @@ import {
   type GameServices,
   type LiveSubscription,
 } from "@supagame/sdk-ts";
-import { TOTAL_COINS } from "./coin-counts";
+import { TOTAL_POINTS } from "./coin-counts";
 
 export interface CompletedRun {
   id: string;
@@ -175,7 +175,7 @@ export class Leaderboard {
   setAccountScope(scope: string) {
     this.storageKey = `${KEY}:${scope}`;
     this.best = 0; this.personalBest = null; this.rank = null;
-    try { const value = Number(this.storage?.getItem(this.storageKey) ?? 0); if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_COINS) this.best = value; } catch { /* Optional local best. */ }
+    try { const value = Number(this.storage?.getItem(this.storageKey) ?? 0); if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_POINTS) this.best = value; } catch { /* Optional local best. */ }
   }
   private identity?: Promise<string>;
   private readyName?: string;
@@ -192,7 +192,7 @@ export class Leaderboard {
     this.achievements = new RunAchievements(game);
     try {
       const value = Number(storage?.getItem(KEY) ?? 0);
-      if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_COINS) {
+      if (Number.isSafeInteger(value) && value >= 0 && value <= TOTAL_POINTS) {
         this.best = value;
         this.persisted = !!storage;
       }
@@ -366,7 +366,7 @@ export class Leaderboard {
   }
 
   private saveBest(score: number) {
-    if (!Number.isSafeInteger(score) || score < 0 || score > TOTAL_COINS)
+    if (!Number.isSafeInteger(score) || score < 0 || score > TOTAL_POINTS)
       return;
     this.best = Math.max(this.best, score);
     try {
@@ -417,7 +417,7 @@ export class Leaderboard {
     if (
       !Number.isSafeInteger(run.score) ||
       run.score < 0 ||
-      run.score > TOTAL_COINS ||
+      run.score > TOTAL_POINTS ||
       !Number.isFinite(run.durationMs) ||
       run.durationMs < 60000 ||
       !run.id

@@ -21,6 +21,8 @@ export interface UIState {
   controlHint?: string;
   mobile?: boolean;
   score: number;
+  zone?: string;
+  pickup?: string;
   remaining: number;
   best: number;
   sucking: boolean;
@@ -300,6 +302,9 @@ export class UI {
       const score = s.score.toLocaleString("en-US");
       this.text(score, 26, 28, 5, C.dark);
       this.text(score, 24, 26, 5, this.scorePulse > 0 ? "#fff8cf" : C.gold);
+      this.text("POINTS", 24, 66, 1, C.muted);
+      if(s.zone)this.text(s.zone,cx,92,2,C.gold,"center");
+      if(s.pickup)this.text(s.pickup,cx,320,2,C.mint,"center");
       const time = String(Math.ceil(s.remaining)).padStart(2, "0");
       this.text(time, cx + 2, 28, 5, C.dark, "center");
       this.text(

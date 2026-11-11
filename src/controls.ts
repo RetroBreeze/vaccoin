@@ -50,7 +50,7 @@ export class GamepadControls {
     return state;
   }
 }
-export type TouchAction = "move" | "look" | "jump" | "vacuum";
+export type TouchAction = "move" | "look" | "jump";
 export class TouchInput {
   moveX = 0;
   moveY = 0;
@@ -66,7 +66,7 @@ export class TouchInput {
     if (this.pointers.has(action)) return false;
     this.pointers.set(action, { id, x, y });
     if (action === "jump") this.jump = true;
-    if (action === "vacuum") this.vacuum = true;
+    if (action === "look") this.vacuum = true;
     return true;
   }
   move(id: number, x: number, y: number) {
@@ -78,11 +78,7 @@ export class TouchInput {
         const radius = Math.max(48, Math.hypot(dx, dy));
         this.moveX = dx / radius;
         this.moveY = -dy / radius;
-      } else if (
-        action === "look" ||
-        action === "vacuum" ||
-        action === "jump"
-      ) {
+      } else if (action === "look" || action === "jump") {
         this.dx += dx;
         this.dy += dy;
         pointer.x = x;
@@ -95,7 +91,7 @@ export class TouchInput {
       if (pointer.id !== id) continue;
       this.pointers.delete(action);
       if (action === "move") this.moveX = this.moveY = 0;
-      if (action === "vacuum") this.vacuum = false;
+      if (action === "look") this.vacuum = false;
       return true;
     }
     return false;

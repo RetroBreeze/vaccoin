@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mockBackend } from "./mock-backend.mjs";
 const origin = process.env.ACCOUNTS_TEST_ORIGIN ?? "http://127.0.0.1:5173";
@@ -37,6 +37,7 @@ try {
     ["guest", 390],
     ["merge", 1280],
     ["link", 390],
+    ["googleName", 390],
     ["defer", 390],
     ["cancelAuth", 1280],
   ]) {
@@ -46,6 +47,7 @@ try {
         hasTouch: width === 390,
       }),
       errors = [];
+    page.setDefaultTimeout(15000);
     page.on("pageerror", (e) => {
       errors.push(e.message);
       console.log("PAGE ERROR", e.message);
@@ -68,7 +70,8 @@ try {
       role: "authenticated",
       is_anonymous: !linked,
       app_metadata: {},
-      user_metadata: {},
+      email: linked ? "player.name+vaccoin@example.com" : undefined,
+      user_metadata: linked ? { full_name: "Google Name" } : {},
       created_at: "2026-11-10T00:00:00Z",
       identities: linked
         ? [
@@ -143,7 +146,12 @@ try {
       if (url.pathname.endsWith("/players/me"))
         return reply(route, {
           playerId: active,
-          displayName: active === targetId ? "Google Player" : "Mara",
+          displayName:
+            active === targetId
+              ? strategy === "googleName"
+                ? null
+                : "Google Player"
+              : "Mara",
           createdAt: "2026-11-10T00:00:00Z",
         });
       if (!url.pathname.includes("/saves")) return route.fallback();
@@ -242,7 +250,9 @@ try {
           ),
           true,
         );
-        await page.screenshot({path: "test-results/accounts-deferred-state.png"});
+        await page.screenshot({
+          path: "test-results/accounts-deferred-state.png",
+        });
         await page.reload();
         await page
           .getByRole("button", { name: "KEEP GOOGLE PROGRESS", exact: true })
@@ -254,7 +264,9 @@ try {
       await page
         .getByRole("button", {
           name:
-            strategy === "cloud" || strategy === "defer"
+            strategy === "cloud" ||
+            strategy === "defer" ||
+            strategy === "googleName"
               ? "KEEP GOOGLE PROGRESS"
               : strategy === "guest"
                 ? "KEEP GUEST PROGRESS"
@@ -262,8 +274,10 @@ try {
           exact: true,
         })
         .click();
-      if (strategy !== "cloud" && strategy !== "defer") {
-        await page.screenshot({path: `test-results/accounts-confirm-${strategy}.png`});
+      if (!["cloud", "defer", "googleName"].includes(strategy)) {
+        await page.screenshot({
+          path: `test-results/accounts-confirm-${strategy}.png`,
+        });
         await page
           .getByRole("button", { name: "CONFIRM", exact: true })
           .click();
@@ -285,6 +299,24 @@ try {
         ]);
       if (strategy === "cloud" || strategy === "defer")
         assert.equal(saves.get(targetId).revision, 4);
+    }
+    if (strategy !== "cancelAuth") {
+      if (strategy === "link")
+        await page
+          .getByRole("button", { name: "BACK TO GAME", exact: true })
+          .click();
+      await expect(page.locator("#current-player-name")).toHaveText(
+        strategy === "link"
+          ? "Mara"
+          : strategy === "googleName"
+            ? "Google Name"
+            : "Google Player",
+      );
+      await page.getByRole("button", { name: "ACCOUNT", exact: true }).click();
+      await expect(page.locator("#account-email")).toBeVisible();
+      await expect(page.locator("#account-email")).toHaveText(
+        "player.name+vaccoin@example.com",
+      );
     }
     assert.deepEqual(errors, []);
     console.log(

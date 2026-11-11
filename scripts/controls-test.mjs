@@ -45,13 +45,11 @@ try {
   assert.equal((await snapshot(mobile)).controlMode, "touch");
   const cdp = await context.newCDPSession(mobile);
   const move = await centre(mobile, "#touch-move");
-  const vac = await centre(mobile, "#touch-vacuum");
   const look = { x: 620, y: 140 };
   const before = await snapshot(mobile);
   const touches = [
     { ...move, id: 1 },
     { ...look, id: 2 },
-    { ...vac, id: 3 },
   ];
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
@@ -79,7 +77,7 @@ try {
   await mobile.waitForFunction(() => !window.vaccoinQA.snapshot().vacuumHeld);
   // Captured action fingers keep aiming and holding their action outside the button.
   for (const [id, dx] of [
-    ["#touch-vacuum", -130],
+    ["#touch-look", -130],
     ["#touch-jump", 70],
   ]) {
     const point = await centre(mobile, id);
@@ -100,7 +98,7 @@ try {
       { yaw: start.yaw, pitch: start.pitch },
     );
     assert.equal(await mobile.locator(id).getAttribute("data-held"), "true");
-    if (id === "#touch-vacuum")
+    if (id === "#touch-look")
       assert.equal((await snapshot(mobile)).vacuumHeld, true);
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchEnd",

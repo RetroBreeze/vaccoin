@@ -2,7 +2,7 @@
 
 **One vacuum. One minute. All the gold.**
 
-A complete first-person browser arcade game built with TypeScript, Three.js, Vite and a separate Canvas2D pixel interface. Race through the mint, sky galleries and undervault, vacuum real coins, and smash containers to beat your personal best.
+A complete first-person browser arcade game built with TypeScript, Three.js, Vite and a separate Canvas2D pixel interface. Race through a three-storey PSX casino, vacuum coins and valuables, and burst slot machines to beat your personal best.
 
 ## Run locally
 
@@ -41,46 +41,53 @@ Fullscreen is optional. Supported mobile browsers lock to landscape after enteri
 
 The **60-second clock keeps running** when you stop controls, release the mouse, rotate to portrait, disconnect a controller, switch tabs, or lose focus. Movement and suction stop until you resume. A restart abandons the previous run; only completed rounds update your best. There is no pause exploit.
 
-Start by sweeping the gold directly ahead. Vacuum green crates until they burst. Run into big wooden crates at speed. Teal ramps climb to the galleries; violet ramps lead down to the vault. Four springboards launch automatically: two reach the galleries and two return from the vault. The central floor continues over the vault, with access down the side ramps. Dropping from the upper floor is a shortcut. Every coin is exactly one point.
+Start by sweeping the valuables in the entrance. Hold suction on slot machines until they burst. Explore the slot gallery, roulette hall and blackjack salon; follow signs to the two stair cores for the upper poker rooms, high-limit salon and pearl lounge, or descend to the cashier, counting rooms and bullion vault. The upper promenade overlooks the atrium, with a deliberate drop shortcut at its southern edge. No lifts or door timers interrupt a run.
 
-## Implementation
+Coins score **1**, large coins **10**, dollar bills **25**, gold bars **100**, pearls **250**, and diamonds **500**. Every placement and machine payout repeats exactly; route choice and movement determine the score. Workshop earnings use the run's point value, retaining existing balances and cosmetics.
 
-- Three hand-designed elevations, broad ramps, a bridge, drops, colour-coded routes and landmarks.
-- Accelerated FPS movement, air control, jumping, floor support, wall and underside collision at a fixed 120 Hz.
-- **12,000 loose coins + 7,200 inside 20 crates = 19,200 actual collectibles.** A deterministic layout gives repeatable routes.
-- One instanced collectible mesh, typed-array state, 3D spatial hash, maximum 1,800 active coins, rate-limited acquisition, curved suction and ballistic showers. Eight-sided bevelled coins use 48 triangles and the supplied KayKit gold palette. Collected instances are hidden, cannot score twice, and reset immediately.
-- Original KayKit glTF crates, vault, gold stacks, money, modular scenery and a detailed coin emblem. Shared geometry/materials; static architecture batched by material.
-- Approximately 480×270 internal rendering at 16:9, adjusted horizontally for aspect ratio, with nearest-neighbour scaling. Canvas2D HUD and menus use a locally drawn bitmap font. No external font, sound or asset requests.
-- Visible nozzle/fan, pooled airflow and debris, score pulse, procedural motor, coin arpeggios, impacts, countdown and results cue.
-- Resilient local personal best, optional audio, pointer-lock retry, elapsed-time expiry and complete reset.
+## Casino implementation
+
+- An 84 × 76 footprint with three storeys at -5, 0 and 5, twelve enclosed rooms, rear passages, twin stair cores and an open central atrium.
+- Shared layout data drives visible walls, floors, furniture and collision. The existing accelerated movement, jumping and fixed 120 Hz physics remain.
+- **45,997 loose valuables plus 15,760 items in 184 machines: 61,757 physical collectibles, worth 115,432 points.** Points and collected-item counts are tracked separately.
+- Dense, deterministic floor coverage connects room piles through every corridor and stairway. Typed instanced meshes partitioned by kind and floor, a spatial hash and a maximum of 1,800 active items preserve curved suction and ballistic payouts. Walls, columns and decks occlude suction.
+- Twenty-four selected GLBs from the supplied PSX Casino, Slot Machines and Table Games packs, with their baked red-and-gold Quarkery textures. Authored collision helper meshes are removed from rendering; static parts share geometry/materials and are batched.
+- Native-resolution rendering at the viewport’s device-pixel ratio with antialiasing, textured casino architecture, room signs, room-name HUD and valuable pickup feedback.
+- Accounts, workshop saves, achievements, controls and leaderboard integration retained.
+
+Run `python scripts/extract-casino-assets.py` to reproduce the runtime assets from the archives in `public/assets`. Source provenance is recorded in `public/assets/casino/provenance.json`. Production builds exclude the large ZIP archives; source copies remain intact.
+
 
 ## Supagame leaderboards
 
-The installed Supagame SDK uses the configured Supabase project and the `vaccoin` leaderboard. Existing anonymous identities and display names are reused; completed rounds submit their actual final coin total with a stable submission UUID. Results show server personal best, rank and top 10. Offline play and local best remain available. See [integration details](docs/supagame-integration.md) for configuration, failure handling and tests.
+The installed Supagame SDK uses the configured Supabase project and the `vaccoin` leaderboard. Existing anonymous identities and display names are reused; completed rounds submit their actual final point total with a stable submission UUID. Results show server personal best, rank and top 10. Offline play and local best remain available. See [integration details](docs/supagame-integration.md) for configuration, failure handling and tests.
 
 Client-side scores are **not inherently cheat-proof**. Server validation and idempotency do not prove that a client honestly played a round. No anti-cheat claim is made here.
 
 ## Verification
 
+Casino checks (all backend calls mocked):
+
 ```sh
-npx playwright install chromium
+npm test
+npm run build
 npm run dev -- --port 5173
-# In a second terminal:
-npm run test:browser
-node scripts/full-round-test.mjs
-node scripts/compatibility-test.mjs
-node scripts/controls-test.mjs
+CASINO_TEST_ORIGIN=http://localhost:5173 node scripts/casino-browser-test.mjs
 ```
 
-Browser tests require the dev server at port 5173. All backend HTTP is mocked. The controls check exercises mobile emulation with real multi-touch pointer events and a simulated standard gamepad, including fullscreen, portrait fallback, controller-to-mouse switching and restarting. Other checks use real WebGL and Pointer Lock, test suction, ramps in both directions, both crate interactions, mute, released-mouse expiry, score accounting, results, reset and viewport scaling. The full-round test uses keyboard movement and runs a genuine 60-second round. Screenshots and JSON reports are written to ignored `test-results/`.
+This checks weighted collection, actual staircase movement, slot bursts, reset and expiry, with screenshots of each floor. Historical mint-specific browser scripts remain as references; their old teleports and crate expectations do not describe the casino. See [casino verification and release notes](docs/casino-verification.md).
 
-Development-only QA helpers are enabled with `?qa`; they are removed from production builds. A software-only graphics environment is not representative of normal desktop performance. See `docs/verification.md` for measured results and remaining manual playtesting.
+
+Install Chromium with `npx playwright install chromium` if needed. Development-only QA helpers are enabled with `?qa` and removed from production builds. `node scripts/production-test.mjs` checks the production preview on port 4173, including asset loading, pointer lock and restart. Screenshots and JSON reports are written to ignored `test-results/`.
 
 ## Project map
 
-`main.ts` composes the game. `rendering.ts`, `assets.ts` and `arena.ts` build the world; `terrain.ts`, `player.ts` and `springboards.ts` handle movement; `coins.ts`, `spatial.ts`, `vacuum.ts` and `destructibles.ts` handle collectibles; `effects.ts` and `audio.ts` provide feedback; `ui.ts` and `pixel-font.ts` draw the interface; `round.ts` owns round state; `supagame.ts` owns the integration boundary.
+`main.ts` composes the game. `rendering.ts`, `assets.ts` and `arena.ts` build the world; `casino-layout.ts`, `terrain.ts` and `player.ts` handle layout and movement; `collectibles.ts`, `coins.ts`, `spatial.ts`, `vacuum.ts` and `destructibles.ts` handle collectibles; `effects.ts` and `audio.ts` provide feedback; `ui.ts` and `pixel-font.ts` draw the interface; `round.ts` owns round state; `supagame.ts` owns the integration boundary.
 
 ## Assets
+
+Casino architecture, furniture, slot machines and gaming tables come from the three user-supplied PSX asset packs. Their source archives are preserved in `public/assets`; `casino/provenance.json` maps every extracted model and texture to its archive. The packs do not include a standalone license file in the inspected archive paths, so no new license claim is made here. Bill, bar, pearl and diamond collectible geometry is native Three.js geometry; the existing KayKit coin remains.
+
 
 KayKit Bits Bundle 2 by **Kay Lousberg** (CC0). Selected glTF files, original buffers and palette textures are copied into `public/assets/`; the full supplied source bundle remains untouched and is excluded from Git/build output. License: `public/assets/KayKit-LICENSE.txt`.
 

@@ -18,7 +18,7 @@ export class Round {
   }
   collect(count: number) {
     if (!Number.isSafeInteger(count) || count < 0)
-      throw new Error("A coin is one whole point");
+      throw new Error("Score must be a nonnegative whole number");
     if (this.phase === "playing") this.score += count;
   }
   tick(now: number) {

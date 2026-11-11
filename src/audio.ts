@@ -7,8 +7,36 @@ export class AudioEngine {
   private lastCoin = 0;
   private note = 0;
   private noise?: AudioBuffer;
+  private music?: HTMLAudioElement;
+  private musicGameplay = false;
+  private musicUnlocked = false;
   muted = false;
+  updateMusic(gameplay: boolean) {
+    const changed = this.musicGameplay !== gameplay;
+    this.musicGameplay = gameplay;
+    if (!this.musicUnlocked) return;
+    if (!this.music) {
+      this.music = new Audio();
+      this.music.loop = true;
+      this.music.volume = 0.35;
+      this.music.muted = this.muted;
+    } else if (!changed) return;
+    this.music.src = `${import.meta.env.BASE_URL}assets/music/${gameplay ? "Big-Band-Swingin_Looping.mp3" : "Mellow-Mind_Looping.mp3"}`;
+    void this.music.play().catch(() => {
+      // Retry on the next user interaction if playback was blocked.
+      this.musicUnlocked = false;
+    });
+  }
   async unlock() {
+    if (!this.musicUnlocked) {
+      this.musicUnlocked = true;
+      // Recreate the player after a blocked attempt so the same track retries.
+      if (this.music) {
+        this.music.pause();
+        this.music = undefined;
+      }
+      this.updateMusic(this.musicGameplay);
+    }
     try {
       if (!this.ctx) {
         this.ctx = new AudioContext();
@@ -47,6 +75,7 @@ export class AudioEngine {
   }
   setMuted(value: boolean) {
     this.muted = value;
+    if (this.music) this.music.muted = value;
     if (this.master && this.ctx)
       this.master.gain.setTargetAtTime(
         value ? 0 : 0.55,

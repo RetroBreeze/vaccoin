@@ -227,3 +227,42 @@ it("callback failure after an account change never resumes guest runtime state o
     f.environment.storage.getItem("vaccoin.account-flow:project"),
   ).toContain("transition");
 });
+it("loads linked Google identity details and clears them when returning to a guest", async () => {
+  const f = setup();
+  const linked = {
+    userId: "google-player",
+    isAnonymous: false,
+    providers: ["google"],
+  };
+  f.game.players.getAuthStatus.mockResolvedValue(linked as never);
+  const auth = {
+    getUser: vi.fn(async () => ({
+      data: {
+        user: {
+          id: "google-player",
+          email: "player@example.com",
+          user_metadata: { full_name: "Google Name" },
+        },
+      },
+      error: null,
+    })),
+  };
+  const account = new Accounts(
+    f.game as never,
+    f.workshop as never,
+    "project",
+    f.environment,
+    auth as never,
+  );
+  await account.refresh();
+  expect(account.email).toBe("player@example.com");
+  expect(account.googleDisplayName).toBe("Google Name");
+  f.game.players.getAuthStatus.mockResolvedValue({
+    userId: "guest",
+    isAnonymous: true,
+    providers: [],
+  });
+  await account.refresh();
+  expect(account.email).toBe("");
+  expect(account.googleDisplayName).toBe("");
+});

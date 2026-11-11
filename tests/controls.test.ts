@@ -48,19 +48,18 @@ it("ignores unmapped devices and switches to a controller that is used", () => {
   expect(input.poll([{ ...pad(), mapping: "" }]).connected).toBe(false);
   expect(input.poll([pad(), pad([1, 0, 0, 0], [], 1)]).moveX).toBe(1);
 });
-it("touch movement is bounded and independently tracks move, look and vacuum fingers", () => {
+it("touch movement is bounded and independently tracks movement and aiming fingers", () => {
   const input = new TouchInput();
   input.begin("move", 1, 100, 100);
   input.move(1, 200, 0);
   expect(Math.hypot(input.moveX, input.moveY)).toBeCloseTo(1);
   input.begin("look", 2, 250, 100);
   input.move(2, 270, 110);
-  input.begin("vacuum", 3, 0, 0);
   expect(input.vacuum).toBe(true);
   expect(input.consumeLook()).toEqual([20, 10]);
   expect(input.consumeLook()).toEqual([0, 0]);
   input.end(2);
-  expect(input.vacuum).toBe(true);
+  expect(input.vacuum).toBe(false);
   input.end(1);
   expect(input.moveX).toBe(0);
   input.end(3);
@@ -75,7 +74,7 @@ it("does not steal an active finger and clears held actions when cancelled", () 
   input.begin("jump", 3, 0, 0);
   expect(input.consumeJump()).toBe(true);
   expect(input.consumeJump()).toBe(false);
-  input.begin("vacuum", 4, 0, 0);
+  input.begin("look", 4, 0, 0);
   input.clear();
   expect(input.vacuum).toBe(false);
   expect(input.moveY).toBe(0);
@@ -97,15 +96,15 @@ it("rejects invalid axis data and handles an analog trigger without a pressed fl
 });
 it("reports ownership on release so rejected extra fingers cannot clear held styling", () => {
   const input = new TouchInput();
-  input.begin("vacuum", 1, 0, 0);
-  expect(input.begin("vacuum", 2, 0, 0)).toBe(false);
+  input.begin("look", 1, 0, 0);
+  expect(input.begin("look", 2, 0, 0)).toBe(false);
   expect(input.end(2)).toBe(false);
   expect(input.vacuum).toBe(true);
   expect(input.end(1)).toBe(true);
   expect(input.vacuum).toBe(false);
 });
 
-it.each(["vacuum", "jump"] as const)(
+it.each(["look", "jump"] as const)(
   "aims while holding %s without dropping or repeating the action",
   (action) => {
     const input = new TouchInput();
@@ -113,11 +112,11 @@ it.each(["vacuum", "jump"] as const)(
     expect(input.consumeJump()).toBe(action === "jump");
     input.move(1, 600, 200);
     expect(input.consumeLook()).toEqual([-100, -100]);
-    expect(input.vacuum).toBe(action === "vacuum");
+    expect(input.vacuum).toBe(action === "look");
     expect(input.consumeJump()).toBe(false);
     input.move(1, 620, 190);
     expect(input.consumeLook()).toEqual([20, -10]);
-    expect(input.vacuum).toBe(action === "vacuum");
+    expect(input.vacuum).toBe(action === "look");
     input.end(1);
     input.move(1, 650, 150);
     expect(input.consumeLook()).toEqual([0, 0]);

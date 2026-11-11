@@ -22,6 +22,7 @@ canvas {
   image-rendering: crisp-edges;
 }
 #world {
+  image-rendering: auto;
   z-index: 0;
 }
 #ui {
@@ -147,9 +148,6 @@ canvas {
   outline: 2px solid #ffcf58;
   outline-offset: 3px;
 }
-#pause {
-  right: max(66px, calc(env(safe-area-inset-right) + 54px));
-}
 #display-message {
   position: fixed;
   top: max(54px, calc(env(safe-area-inset-top) + 44px));
@@ -196,68 +194,25 @@ canvas {
 }
 #touch-look {
   position: absolute;
-  inset: 70px 0 0 48%;
-}
-#touch-look > span {
-  position: absolute;
-  right: 22%;
-  top: 20%;
-  color: #fff2d26b;
-  font-size: 12px;
-  pointer-events: none;
+  inset: 0 0 0 50%;
 }
 #touch-move {
   position: absolute;
-  left: max(22px, env(safe-area-inset-left));
-  bottom: max(24px, env(safe-area-inset-bottom));
-  width: 120px;
-  height: 120px;
-  border: 2px solid #96b6c280;
-  background: #10283766;
-}
-#touch-move .stick {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  left: 42px;
-  top: 42px;
-  border: 2px solid #ffcf58;
-  background: #ffcf5866;
-  transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
-  pointer-events: none;
-}
-.touch-label {
-  position: absolute;
-  bottom: 6px;
-  width: 100%;
-  text-align: center;
-  color: #fff2d2a0;
-  font-size: 10px;
-  pointer-events: none;
-}
-#touch-controls button {
-  position: absolute;
-  bottom: max(26px, env(safe-area-inset-bottom));
-  border: 2px solid #96b6c2;
-  border-radius: 0;
-  background: #102837a8;
-  color: #fff2d2;
-  font: bold 16px monospace;
+  inset: 0 50% 0 0;
 }
 #touch-jump {
-  right: max(132px, calc(env(safe-area-inset-right) + 120px));
-  width: 72px;
-  height: 54px;
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 52px;
+  height: 44px;
+  border: 1px solid #96b6c280;
+  border-radius: 6px;
+  background: #10283780;
+  color: #fff2d2;
+  font: bold 11px monospace;
 }
-#touch-vacuum {
-  right: max(22px, env(safe-area-inset-right));
-  width: 92px;
-  height: 76px;
-  border-color: #ffcf58 !important;
-  color: #ffcf58 !important;
-}
-#touch-controls button[data-held="true"],
-#touch-move[data-held="true"] {
+#touch-jump[data-held="true"] {
   background-color: #496477b8;
 }
 #rotate-fullscreen {
@@ -332,14 +287,16 @@ canvas {
   min-width: 48px;
   min-height: 48px;
 }
-#player-name, #saved-player-name {
+#player-name,
+#saved-player-name {
   font-size: clamp(12px, 1.7vh, 18px);
 }
 #display-name {
   min-height: 44px;
   font-size: max(16px, 2.5vh);
 }
-#saved-player-name button, #name-actions button {
+#saved-player-name button,
+#name-actions button {
   min-height: 44px;
   padding: 8px 14px;
   font-size: clamp(12px, 1.7vh, 16px);
@@ -357,9 +314,12 @@ button:active {
   top: max(64px, calc(env(safe-area-inset-top) + 58px));
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  #saved-player-name button, #name-actions button {
+  #saved-player-name button,
+  #name-actions button {
     min-height: 36px;
     padding: 5px 12px;
   }
-  #display-name { min-height: 36px; }
+  #display-name {
+    min-height: 36px;
+  }
 }

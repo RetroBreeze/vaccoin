@@ -10,3 +10,4 @@ test-results/
 /supabase/.branches/
 /.supagame-deploy-lock/
 /.supagame-stage/
+/public/assets/*.zip

@@ -98,7 +98,7 @@ export function drawTitleScreen(
       result = Array.from(result).slice(0, -1).join("");
     return result;
   };
-  rect(0, 0, w, 540, "#071b2bee");
+  rect(0, 0, w, 540, "#19111cbb");
   // Deterministic particles wrap independently: no allocations or simulation during play.
   for (let i = 0; i < 65; i++) {
     const depth = 0.45 + (i % 5) * 0.15;
@@ -131,6 +131,7 @@ export function drawTitleScreen(
   } else {
     text("VACCOIN", g.left, logoY - 14, 5, gold, "center");
   }
+  text("GRAND CASINO",g.left,g.stacked ? 100 : 208,2,gold,"center");
   const { boardX: x, boardY: y, boardW: bw, boardH: bh } = g;
   rect(x + 5, y + 6, bw, bh, "#020d17bb");
   rect(x, y, bw, bh, "#102837f5");

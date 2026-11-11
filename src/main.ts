@@ -8,8 +8,10 @@ import "./style.css";
 import { Vector3 } from "three";
 import { Assets } from "./assets";
 import { Rendering } from "./rendering";
-import { buildArena } from "./arena";
-import { Springboards } from "./springboards";
+import { buildArena, updateCasinoVisibility } from "./arena";
+import { CasinoAtmosphere } from "./casino-atmosphere";
+import { CasinoSpectacle } from "./casino-spectacle";
+import { casinoZone } from "./casino-layout";
 import { Player } from "./player";
 import { LARGE_CRATE_COINS } from "./coin-counts";
 import { Coins } from "./coins";
@@ -73,8 +75,6 @@ async function boot() {
     achievementsOpen = !achievementsOpen;
     if (achievementsOpen) void leaderboard.browseAchievements().catch(() => {});
   });
-  const fullscreenButton =
-    document.querySelector<HTMLButtonElement>("#fullscreen")!;
   const pauseButton = document.querySelector<HTMLButtonElement>("#pause")!;
   const rotatePrompt = document.querySelector<HTMLElement>("#rotate-device")!;
   const displayMessage =
@@ -98,18 +98,11 @@ async function boot() {
       ? ""
       : "Fullscreen unavailable. You can still play in this browser.";
   }
-  fullscreenButton.addEventListener("click", () => void toggleFullscreen());
   document
     .querySelector("#rotate-fullscreen")!
     .addEventListener("click", () => void immersive.enter());
   document.addEventListener("fullscreenchange", () => {
     const active = !!document.fullscreenElement;
-    fullscreenButton.textContent = active ? "][" : "[ ]";
-    fullscreenButton.setAttribute(
-      "aria-label",
-      active ? "Exit fullscreen" : "Enter fullscreen",
-    );
-    fullscreenButton.setAttribute("aria-pressed", String(active));
     if (!active) {
       try {
         screen.orientation?.unlock?.();
@@ -128,7 +121,7 @@ async function boot() {
   const emblem = buildArena(view.scene, assets);
   const shape = assets.coin(),
     coins = new Coins(shape.geometry, shape.material);
-  view.scene.add(coins.mesh);
+  coins.meshes.forEach(mesh => view.scene.add(mesh));
   const connection = configuredGameConnection();
   const identityKey = `vaccoin.workshop.identity:${connection?.namespace ?? 'local'}`;
   let activePlayer: string | null = null;
@@ -195,7 +188,7 @@ async function boot() {
     await workshop.initialize();
     audio.setMuted(workshop.progress.preferences.muted);
   };
-  const accounts = new Accounts(connection?.game, workshop, connection?.namespace ?? 'local');
+  const accounts = new Accounts(connection?.game, workshop, connection?.namespace ?? 'local', undefined, connection?.supabase.auth);
   const accountUI = new AccountUI(ui, accounts, () => {
     leaderboardOpen = false; achievementsOpen = false; workshopUI.setOpen(false); pauseControls();
   });
@@ -223,7 +216,7 @@ async function boot() {
         profile.bind(scope, accounts.status.isAnonymous);
         leaderboard.setAccountScope(scope);
         const remote = await connection.game.players.getMe();
-        if (remote.displayName) profile.save(remote.displayName);
+        if (remote.displayName || accounts.googleDisplayName) profile.save(remote.displayName || accounts.googleDisplayName);
         else if (!accounts.status.isAnonymous) profile.name = '';
         nameInput.value = profile.name;
         leaderboard.name = profile.name || 'YOU';
@@ -318,7 +311,8 @@ async function boot() {
       audio.burst();
     },
   );
-  const springboards = new Springboards(view.scene);
+  const atmosphere = new CasinoAtmosphere(view.scene);
+  const spectacle = new CasinoSpectacle(view.scene);
   const intent = new PlayIntent();
   const keys = new Set<string>(),
     eye = new Vector3(),
@@ -396,7 +390,6 @@ async function boot() {
     player.reset();
     coins.reset();
     destructibles.reset();
-    springboards.reset();
     effects.reset();
     rate = 0;
     accumulator = 0;
@@ -467,6 +460,8 @@ async function boot() {
     }
   }
   button.addEventListener("click", () => void play());
+  document.addEventListener("pointerdown", () => void audio.unlock());
+  document.addEventListener("keydown", () => void audio.unlock());
   canvas.addEventListener("click", () => {
     if (!controlsActive() && round.phase === "playing") void play();
   });
@@ -568,7 +563,7 @@ async function boot() {
     const run = { id: round.id, score: round.score, durationMs: 60000 };
     void leaderboard.complete(run);
     void workshop.complete(run, runOwner, runSaveGeneration);
-    status.textContent = `Round complete. ${round.score} coins collected. Play again.`;
+    status.textContent = `Round complete. ${round.score} points collected. Play again.`;
   }
   document.addEventListener("visibilitychange", () => {
     leaderboard.achievements.update(round.phase, document.hidden);
@@ -594,10 +589,6 @@ async function boot() {
       keys.has("Space"),
     );
     keys.delete("Space");
-    if (springboards.update(dt, player)) {
-      audio.tone(180, 0.14, 0.12, "triangle");
-      audio.tone(540, 0.18, 0.09, "sine", 0.06);
-    }
     cameraToPlayer();
     vacuum.update(dt, performance.now() / 1000, vacuumHeld, player.speed, rate);
     round.destroyed += destructibles.update(
@@ -637,6 +628,7 @@ async function boot() {
     rotatePrompt.hidden = !portrait() || round.phase === "title" || accounts.open;
     if (portrait() && (portableActive || locked)) pauseControls();
     const active = round.phase === "playing" && controlsActive();
+    audio.updateMusic(active);
     pauseButton.hidden = round.phase !== "playing" || !active;
     touch.show(active && mobile);
     if (active) {
@@ -683,8 +675,8 @@ async function boot() {
     vacuum.group.visible = round.phase !== "title";
     if (round.phase === "title") {
       const t = now * 0.00007;
-      view.camera.position.set(19 + Math.sin(t) * 4, 15, 25);
-      view.camera.lookAt(-2, 1, -6);
+      view.camera.position.set(4 + Math.sin(t) * 2, 3, 30);
+      view.camera.lookAt(0, 3, -6);
       emblem.rotation.y = Math.sin(now * 0.0005) * 0.15;
     } else {
       const desired = 78 + (player.speed / 14) * 3;
@@ -722,6 +714,8 @@ async function boot() {
     uiState.browseLoading = leaderboard.browseLoading;
     uiState.browseCanRetry = leaderboard.browseCanRetry;
     uiState.score = round.score;
+    uiState.zone = casinoZone(player.position.x,player.position.y,player.position.z);
+    uiState.pickup = coins.pickupTime > 0 ? coins.pickup : "";
     uiState.remaining = round.phase === "playing" ? round.remaining(now) : 60;
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
@@ -744,6 +738,10 @@ async function boot() {
     uiState.retryLabel = leaderboard.retryLabel;
     uiState.loading = leaderboard.loading;
     uiState.canRetry = leaderboard.canRetry;
+    coins.updateVisibility(view.camera.position.y, view.camera.position.x, view.camera.position.z);
+    updateCasinoVisibility(view.scene,view.camera.position.y);
+    atmosphere.update(now / 1000, destructibles.objects);
+    spectacle.update(now / 1000);
     view.draw();
     ui.draw(uiState, elapsed);
     ui.drawAchievements(uiState, achievementsButton);
@@ -784,6 +782,8 @@ async function boot() {
           alive: coins.countAlive(),
           active: coins.activeCount,
           collected: coins.collected,
+          collectibleScore: coins.score,
+          zone: casinoZone(player.position.x,player.position.y,player.position.z),
           position: player.position.toArray(),
           velocity: player.velocity.toArray(),
           locked,
@@ -838,5 +838,5 @@ boot().catch((error) => {
   const status = document.querySelector<HTMLParagraphElement>("#status")!;
   status.classList.remove("hidden");
   status.textContent =
-    "Could not open the mint. Check WebGL support and reload.";
+    "Could not open the casino. Check WebGL support and reload.";
 });

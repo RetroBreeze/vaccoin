@@ -19,14 +19,6 @@
     ><button id="play" aria-label="Play Vaccoin">Play</button
     ><button id="sound" aria-label="Mute sound">Sound</button>
     <button
-      id="fullscreen"
-      class="utility"
-      aria-label="Enter fullscreen"
-      title="Fullscreen (F)"
-    >
-      [ ]
-    </button>
-    <button
       id="pause"
       class="utility"
       aria-label="Pause controls"
@@ -42,16 +34,17 @@
       <button id="rotate-fullscreen">TRY LANDSCAPE FULLSCREEN</button>
     </div>
     <div id="touch-controls" hidden aria-label="Touch game controls">
-      <div id="touch-look" data-touch="look" aria-label="Drag to look">
-        <span>LOOK</span>
-      </div>
-      <div id="touch-move" data-touch="move" aria-label="Drag to move">
-        <span class="stick"></span><span class="touch-label">MOVE</span>
-      </div>
+      <div
+        id="touch-look"
+        data-touch="look"
+        aria-label="Hold to vacuum and drag to aim"
+      ></div>
+      <div
+        id="touch-move"
+        data-touch="move"
+        aria-label="Swipe and hold to move"
+      ></div>
       <button id="touch-jump" data-touch="jump" aria-label="Jump">JUMP</button>
-      <button id="touch-vacuum" data-touch="vacuum" aria-label="Hold to vacuum">
-        VAC
-      </button>
     </div>
     <div id="saved-player-name" hidden>
       <strong id="current-player-name"></strong>

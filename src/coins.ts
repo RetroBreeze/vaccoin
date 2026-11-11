@@ -1,3 +1,4 @@
+import { casinoLoot } from "./casino-loot";
 import {
   BufferGeometry,
   DynamicDrawUsage,
@@ -6,7 +7,13 @@ import {
   Object3D,
   Vector3,
 } from "three";
-import { onSpringboard } from "./springboards";
+import { casinoMachines, CASINO_BOUNDS } from "./casino-layout";
+import {
+  collectibleShapes,
+  VALUES,
+  ITEM_NAMES,
+  burstKind,
+} from "./collectibles";
 import { SpatialHash } from "./spatial";
 import {
   ceilingHeight,
@@ -14,8 +21,6 @@ import {
   landingHeight,
   lineBlocked,
   obstacles,
-  surfaces,
-  surfaceHeight,
 } from "./terrain";
 import { LOOSE_COINS, TOTAL_COINS } from "./coin-counts";
 export { LOOSE_COINS, TOTAL_COINS } from "./coin-counts";
@@ -39,21 +44,47 @@ export class Coins {
   private pickupDelay = new Float32Array(TOTAL_COINS);
   private pending: number[] = [];
   readonly mesh: InstancedMesh;
+  readonly meshes: InstancedMesh[];
+  readonly kinds = new Uint8Array(TOTAL_COINS);
+  private slots = new Uint32Array(TOTAL_COINS);
+  private kindCounts = new Uint32Array(18);
+  private meshIds = new Uint8Array(TOTAL_COINS);
+  score = 0;
+  pickup = "";
+  pickupTime = 0;
   readonly grid = new SpatialHash(4);
   private active: number[] = [];
   private nearby: number[] = [];
   private dummy = new Object3D();
   private queryTime = 0;
   private time = 0;
-  private rand = seeded(81);
   private dirtyMin = TOTAL_COINS;
   private dirtyMax = 0;
+  private meshDirtyMin = new Uint32Array(18).fill(TOTAL_COINS);
+  private meshDirtyMax = new Int32Array(18).fill(-1);
   count = 0;
   collected = 0;
   constructor(geometry: BufferGeometry, material: Material | Material[]) {
-    this.mesh = new InstancedMesh(geometry, material, TOTAL_COINS);
-    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.mesh.frustumCulled = false;
+    const shapes = collectibleShapes(geometry, material);
+    const capacities = new Uint32Array(18);
+    for (const item of casinoLoot)
+      capacities[(item.y < -2 ? 0 : item.y > 4 ? 12 : 6) + item.kind]++;
+    for (const m of casinoMachines)
+      for (let i = 0; i < m.coins; i++)
+        capacities[(m.y < -2 ? 0 : m.y > 4 ? 12 : 6) + burstKind(i)]++;
+    this.meshes = Array.from({ length: 18 }, (_, index) => {
+      const shape = shapes[index % 6];
+      const mesh = new InstancedMesh(
+        shape.geometry,
+        shape.material,
+        // Reserve only this kind/floor's budget, not the entire casino eighteen times.
+        capacities[index] + (index % 6 <= 2 ? TOTAL_COINS - LOOSE_COINS : 0),
+      );
+      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+      mesh.frustumCulled = false;
+      return mesh;
+    });
+    this.mesh = this.meshes[6];
     this.reset();
   }
   get activeCount() {
@@ -62,6 +93,11 @@ export class Coins {
   reset() {
     this.count = 0;
     this.collected = 0;
+    this.score = 0;
+    this.pickup = "";
+    this.pickupTime = 0;
+    this.kinds.fill(0);
+    this.kindCounts.fill(0);
     this.state.fill(0);
     this.velocities.fill(0);
     this.age.fill(0);
@@ -71,65 +107,22 @@ export class Coins {
     this.grid.clear();
     this.queryTime = 0;
     this.time = 0;
-    this.rand = seeded(81);
-    // Hand-placed clusters make distinct repeatable route rewards; random only scatters coins within them.
-    const patches = [
-      [0, 13, 0, 7, 6, 1600],
-      [-11, 8, 0, 5, 9, 900],
-      [11, 8, 0, 5, 9, 900],
-      [0, -5, 0, 12, 3, 900],
-      [0, 23, 0, 16, 2, 500],
-      [-23, 0, 6, 4, 7, 1000],
-      [23, 0, 6, 4, 7, 1000],
-      [0, -6, 6, 16, 3, 1000],
-      [0, -25, -6, 16, 4, 1800],
-      [-12, -15, -6, 5, 4, 700],
-      [12, -15, -6, 5, 4, 700],
-    ];
-    for (const [cx, cz, y, rx, rz, n] of patches)
-      for (let i = 0; i < n; i++) {
-        let x = cx + (this.rand() * 2 - 1) * rx,
-          z = cz + (this.rand() * 2 - 1) * rz;
-        if (
-          onSpringboard(x, y, z) ||
-          obstacles.some(
-            (b) =>
-              x > b.x0 - 0.7 &&
-              x < b.x1 + 0.7 &&
-              z > b.z0 - 0.7 &&
-              z < b.z1 + 0.7,
-          )
-        ) {
-          i--;
-          continue;
-        }
-        this.add(x, y + 0.17 + Math.pow(this.rand(), 3) * 0.8, z);
-      }
-    for (const id of [
-      "west-rise",
-      "east-rise",
-      "west-descent",
-      "east-descent",
-    ]) {
-      const s = surfaces.find((s) => s.id === id)!;
-      for (let i = 0; i < 250; i++) {
-        const z = s.z0 + 0.5 + this.rand() * (s.z1 - s.z0 - 1),
-          x = (s.x0 + s.x1) / 2 + (this.rand() - 0.5) * 5;
-        this.add(x, surfaceHeight(s, z) + 0.22 + this.rand() * 0.25, z);
-      }
-    }
-    this.mesh.count = this.count;
+    for (const item of casinoLoot) this.add(item.x, item.y, item.z, item.kind);
+    this.meshes.forEach((mesh, k) => (mesh.count = this.kindCounts[k]));
     this.mesh.instanceMatrix.needsUpdate = true;
     this.dirtyMin = 0;
     this.dirtyMax = this.count - 1;
     this.flush();
   }
-  private add(x: number, y: number, z: number) {
+  private add(x: number, y: number, z: number, kind = 0) {
     const id = this.count++,
       p = id * 3;
     this.positions[p] = x;
     this.positions[p + 1] = y;
     this.positions[p + 2] = z;
+    this.kinds[id] = kind;
+    this.meshIds[id] = (y < -2 ? 0 : y > 4 ? 12 : 6) + kind;
+    this.slots[id] = this.kindCounts[this.meshIds[id]]++;
     this.state[id] = 1;
     this.grid.add(id, x, y, z);
     this.write(id);
@@ -150,36 +143,54 @@ export class Coins {
       this.state[id] === 1 ? ((id % 3) - 1) * 0.3 : this.time * 7,
     );
     this.dummy.updateMatrix();
-    this.mesh.setMatrixAt(id, this.dummy.matrix);
+    this.meshes[this.meshIds[id]].setMatrixAt(
+      this.slots[id],
+      this.dummy.matrix,
+    );
+    const meshId = this.meshIds[id],
+      slot = this.slots[id];
+    this.meshDirtyMin[meshId] = Math.min(this.meshDirtyMin[meshId], slot);
+    this.meshDirtyMax[meshId] = Math.max(this.meshDirtyMax[meshId], slot);
     this.dirtyMin = Math.min(this.dirtyMin, id);
     this.dirtyMax = Math.max(this.dirtyMax, id);
   }
   flush() {
     if (this.dirtyMin <= this.dirtyMax) {
-      this.mesh.instanceMatrix.clearUpdateRanges();
-      this.mesh.instanceMatrix.addUpdateRange(
-        this.dirtyMin * 16,
-        (this.dirtyMax - this.dirtyMin + 1) * 16,
-      );
-      this.mesh.instanceMatrix.needsUpdate = true;
+      for (let i = 0; i < this.meshes.length; i++) {
+        const min = this.meshDirtyMin[i],
+          max = this.meshDirtyMax[i];
+        if (min > max) continue;
+        const mesh = this.meshes[i];
+        // Keep pending ranges for hidden meshes until Three uploads and clears them.
+        mesh.instanceMatrix.addUpdateRange(min * 16, (max - min + 1) * 16);
+        mesh.instanceMatrix.needsUpdate = true;
+        this.meshDirtyMin[i] = TOTAL_COINS;
+        this.meshDirtyMax[i] = -1;
+      }
       this.dirtyMin = TOTAL_COINS;
       this.dirtyMax = 0;
     }
   }
   burst(x: number, y: number, z: number, n: number) {
     const amount = Math.min(n, TOTAL_COINS - this.count);
+    // Each source gets the same shower regardless of which wing was visited first.
+    const burstRandom = seeded(Math.round(x * 71 + y * 137 + z * 197));
     for (let j = 0; j < amount; j++) {
       const id = this.count++,
         p = id * 3,
-        a = this.rand() * Math.PI * 2;
-      this.positions[p] = x + (this.rand() - 0.5) * 0.8;
-      this.positions[p + 1] = y + this.rand() * 0.6;
-      this.positions[p + 2] = z + (this.rand() - 0.5) * 0.8;
-      this.velocities[p] = Math.cos(a) * (6 + this.rand() * 5);
-      this.velocities[p + 1] = 9 + this.rand() * 6;
-      this.velocities[p + 2] = Math.sin(a) * (6 + this.rand() * 5);
+        a = burstRandom() * Math.PI * 2;
+      this.positions[p] = x + (burstRandom() - 0.5) * 0.8;
+      this.positions[p + 1] = y + burstRandom() * 0.6;
+      this.positions[p + 2] = z + (burstRandom() - 0.5) * 0.8;
+      this.velocities[p] = Math.cos(a) * (6 + burstRandom() * 5);
+      this.velocities[p + 1] = 9 + burstRandom() * 6;
+      this.velocities[p + 2] = Math.sin(a) * (6 + burstRandom() * 5);
+      const kind = burstKind(j);
+      this.kinds[id] = kind;
+      this.meshIds[id] = (y < -2 ? 0 : y > 4 ? 12 : 6) + kind;
+      this.slots[id] = this.kindCounts[this.meshIds[id]]++;
       this.age[id] = 0;
-      this.pickupDelay[id] = 0.35 + this.rand() * 0.25;
+      this.pickupDelay[id] = 0.35 + burstRandom() * 0.25;
       if (this.active.length < MAX_ACTIVE) {
         this.state[id] = 3;
         this.active.push(id);
@@ -191,7 +202,7 @@ export class Coins {
       }
       this.write(id);
     }
-    this.mesh.count = this.count;
+    this.meshes.forEach((mesh, k) => (mesh.count = this.kindCounts[k]));
     return amount;
   }
   update(
@@ -202,6 +213,7 @@ export class Coins {
     sucking: boolean,
   ) {
     this.time += dt;
+    this.pickupTime = Math.max(0, this.pickupTime - dt);
     this.queryTime -= dt;
     let gained = 0;
     while (this.pending.length && this.active.length < MAX_ACTIVE) {
@@ -273,10 +285,19 @@ export class Coins {
             dz = target.z - z,
             d = Math.hypot(dx, dy, dz);
           const speed = 15 + 90 / (d + 1.5);
-          if (d < 0.65 || d < speed * dt) {
+          if (
+            (d < 0.65 || d < speed * dt) &&
+            !lineBlocked(x, y, z, target.x, target.y, target.z)
+          ) {
             this.state[id] = 4;
             this.collected++;
-            gained++;
+            const value = VALUES[this.kinds[id]];
+            gained += value;
+            this.score += value;
+            if (value >= 25) {
+              this.pickup = `${ITEM_NAMES[this.kinds[id]]} +${value}`;
+              this.pickupTime = 1.1;
+            }
             this.active[a] = this.active[this.active.length - 1];
             this.active.pop();
             this.write(id);
@@ -302,8 +323,14 @@ export class Coins {
       let nx = x + this.velocities[p] * dt,
         ny = y + this.velocities[p + 1] * dt,
         nz = z + this.velocities[p + 2] * dt;
-      nx = Math.max(-27.5, Math.min(27.5, nx));
-      nz = Math.max(-29.5, Math.min(25.5, nz));
+      nx = Math.max(
+        CASINO_BOUNDS.x0 + 0.5,
+        Math.min(CASINO_BOUNDS.x1 - 0.5, nx),
+      );
+      nz = Math.max(
+        CASINO_BOUNDS.z0 + 0.5,
+        Math.min(CASINO_BOUNDS.z1 - 0.5, nz),
+      );
       if (this.state[id] === 3) {
         if (coinSolid(nx, y, z)) {
           nx = x;
@@ -376,6 +403,11 @@ export class Coins {
       this.write(id);
     }
     return gained;
+  }
+  updateVisibility(_eyeY: number, _x=0, _z=35) {
+    // A connected atrium and stair shafts can reveal any storey. Do not hide
+    // collectibles solely by camera height; this also preserves dropped loot.
+    for(const mesh of this.meshes)mesh.visible=true;
   }
   countAlive() {
     let n = 0;

@@ -1,7 +1,8 @@
+import { CASINO_SPAWN } from "./casino-layout";
 import { Vector3 } from "three";
 import { blockedBody, ceilingHeight, landingHeight } from "./terrain";
 export class Player {
-  position = new Vector3(0, 0, 20);
+  position = new Vector3(CASINO_SPAWN.x, CASINO_SPAWN.y, CASINO_SPAWN.z);
   velocity = new Vector3();
   yaw = 0;
   pitch = -0.12;
@@ -15,7 +16,7 @@ export class Player {
     this.grounded = false;
   }
   reset() {
-    this.position.set(0, 0, 20);
+    this.position.set(CASINO_SPAWN.x, CASINO_SPAWN.y, CASINO_SPAWN.z);
     this.velocity.set(0, 0, 0);
     this.yaw = 0;
     this.pitch = -0.12;

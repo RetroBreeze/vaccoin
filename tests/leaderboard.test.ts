@@ -1,3 +1,4 @@
+import { TOTAL_POINTS } from "../src/coin-counts";
 import { expect, it } from "vitest";
 import { Leaderboard } from "../src/supagame";
 it("keeps best only, never fabricates online standings", async () => {
@@ -45,11 +46,11 @@ it("reports session-only best when storage writes fail", async () => {
   await b.complete({ id: "a", score: 500, durationMs: 60000 });
   expect(b.persisted).toBe(false);
 });
-it("accepts the larger physical coin total and rejects impossible scores", async () => {
+it("accepts the weighted treasure total and rejects impossible scores", async () => {
   const b = new Leaderboard({ getItem: () => null, setItem: () => {} });
-  await b.complete({ id: "large-shower", score: 19200, durationMs: 60000 });
-  expect(b.best).toBe(19200);
+  await b.complete({ id: "large-shower", score: TOTAL_POINTS, durationMs: 60000 });
+  expect(b.best).toBe(TOTAL_POINTS);
   await expect(
-    b.complete({ id: "too-many", score: 19201, durationMs: 60000 }),
+    b.complete({ id: "too-many", score: (TOTAL_POINTS + 1), durationMs: 60000 }),
   ).rejects.toThrow();
 });

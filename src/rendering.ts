@@ -2,23 +2,25 @@ import * as T from "three";
 export class Rendering {
   readonly renderer: T.WebGLRenderer;
   readonly scene = new T.Scene();
-  readonly camera = new T.PerspectiveCamera(78, 1, 0.08, 130);
+  readonly camera = new T.PerspectiveCamera(78, 1, 0.08, 230);
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new T.WebGLRenderer({
       canvas,
-      antialias: false,
+      antialias: true,
       alpha: false,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(1);
+    this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     this.renderer.info.autoReset = false;
     this.renderer.outputColorSpace = T.SRGBColorSpace;
-    this.scene.background = new T.Color(0x9fc5cd);
-    this.scene.fog = new T.Fog(0x9fc5cd, 30, 100);
-    const ambient = new T.HemisphereLight(0xfff3d6, 0x637799, 2.1);
+    this.renderer.toneMapping = T.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.15;
+    this.scene.background = new T.Color(0x24131a);
+    this.scene.fog = new T.Fog(0x24131a, 30, 100);
+    const ambient = new T.HemisphereLight(0xffe5c1, 0x443048, 1.25);
     ambient.layers.enable(1);
     this.scene.add(ambient);
-    const sun = new T.DirectionalLight(0xffe3b3, 2.6);
+    const sun = new T.DirectionalLight(0xffd29a, 0.65);
     sun.position.set(-15, 35, 20);
     sun.layers.enable(1);
     this.scene.add(sun);
@@ -28,8 +30,8 @@ export class Rendering {
   }
   resize() {
     const aspect = innerWidth / innerHeight;
-    const height = 270;
-    this.renderer.setSize(Math.round(height * aspect), height, false);
+    this.renderer.setPixelRatio(window.devicePixelRatio || 1);
+    this.renderer.setSize(innerWidth, innerHeight, false);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }

@@ -26,11 +26,9 @@ export class TouchControls {
       target.addEventListener("pointermove", (event) => {
         if (!this.enabled) return;
         this.input.move(event.pointerId, event.clientX, event.clientY);
-        this.updateStick();
       });
       const release = (event: PointerEvent) => {
         if (this.input.end(event.pointerId)) delete target.dataset.held;
-        this.updateStick();
       };
       target.addEventListener("pointerup", release);
       target.addEventListener("pointercancel", release);
@@ -49,10 +47,5 @@ export class TouchControls {
       this.root.querySelectorAll<HTMLElement>("[data-held]"),
     ))
       delete target.dataset.held;
-    this.updateStick();
-  }
-  private updateStick() {
-    this.root.style.setProperty("--stick-x", `${this.input.moveX * 32}px`);
-    this.root.style.setProperty("--stick-y", `${-this.input.moveY * 32}px`);
   }
 }

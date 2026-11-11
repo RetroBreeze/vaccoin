@@ -1,8 +1,8 @@
-import { Group, Scene, Vector3 } from "three";
+import { casinoMachines } from "./casino-layout";
+import { Group, Scene, Vector3, Mesh, InstancedMesh } from "three";
 import { Assets } from "./assets";
 import { Coins } from "./coins";
 import { Player } from "./player";
-import { SMALL_CRATE_COINS, LARGE_CRATE_COINS } from "./coin-counts";
 import { lineBlocked } from "./terrain";
 export interface Crate {
   mesh: Group;
@@ -13,6 +13,8 @@ export interface Crate {
   broken: boolean;
   strain: number;
   coins: number;
+  instance: number;
+  batch: InstancedMesh[];
 }
 export class Destructibles {
   readonly objects: Crate[] = [];
@@ -22,61 +24,59 @@ export class Destructibles {
     private coins: Coins,
     private onBurst: (x: number, y: number, z: number, n: number) => void,
   ) {
-    const small = [
-      [-5, 0, 12],
-      [6, 0, 7],
-      [-12, 0, -5],
-      [12, 0, -5],
-      [-24, 6, 3],
-      [24, 6, 3],
-      [-10, 6, -7],
-      [10, 6, -7],
-      [-14, -6, -25],
-      [14, -6, -25],
-      [-5, -6, -15],
-      [5, -6, -15],
-    ];
-    const large = [
-      [-11, 0, 16],
-      [11, 0, 16],
-      [-23, 6, -5],
-      [23, 6, -5],
-      [-3, 6, -6],
-      [3, 6, -6],
-      [-13, -6, -20],
-      [13, -6, -20],
-    ];
-    for (const [positions, isLarge] of [
-      [small, false],
-      [large, true],
-    ] as const)
-      for (const [x, y, z] of positions) {
-        const mesh = assets.model(
-          isLarge ? "large" : "small",
-          isLarge ? 2.25 : 1.2,
-        );
-        mesh.position.set(x, y, z);
-        mesh.rotation.y = x < 0 ? 0.15 : -0.15;
-        scene.add(mesh);
-        this.objects.push({
+    for (const key of new Set(casinoMachines.map((m) => m.key))) {
+      const specs = casinoMachines.filter((m) => m.key === key),
+        prototype = assets.model(key, 2.4),
+        batch: InstancedMesh[] = [];
+      prototype.updateMatrixWorld(true);
+      prototype.traverse((part) => {
+        if (part instanceof Mesh) {
+          const geometry = part.geometry.clone().applyMatrix4(part.matrixWorld);
+          const mesh = new InstancedMesh(geometry, part.material, specs.length);
+          mesh.frustumCulled = false;
+          scene.add(mesh);
+          batch.push(mesh);
+        }
+      });
+      for (const [instance, spec] of specs.entries()) {
+        const mesh = new Group();
+        mesh.position.set(spec.x, spec.y, spec.z);
+        mesh.rotation.y = spec.rotation;
+        const object = {
           mesh,
-          x,
-          y,
-          z,
-          large: isLarge,
+          x: spec.x,
+          y: spec.y,
+          z: spec.z,
+          large: false,
           broken: false,
           strain: 0,
-          coins: isLarge ? LARGE_CRATE_COINS : SMALL_CRATE_COINS,
-        });
+          coins: spec.coins,
+          instance,
+          batch,
+        };
+        this.objects.push(object);
+        this.write(object);
       }
+    }
   }
+  private write(object: Crate) {
+    object.mesh.scale.setScalar(object.broken ? 0 : 1);
+    object.mesh.updateMatrix();
+    for (const mesh of object.batch) {
+      mesh.setMatrixAt(object.instance, object.mesh.matrix);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
   reset() {
     for (const o of this.objects) {
       o.broken = false;
       o.strain = 0;
       o.mesh.visible = true;
+      o.mesh.userData.broken = false;
       o.mesh.position.set(o.x, o.y, o.z);
       o.mesh.rotation.z = 0;
+      this.write(o);
     }
   }
   update(
@@ -91,16 +91,17 @@ export class Destructibles {
     for (const o of this.objects) {
       if (o.broken) continue;
       const dx = o.x - eye.x,
-        dy = o.y + 0.6 - eye.y,
+        dy = o.y + 1.5 - eye.y,
         dz = o.z - eye.z,
         d = Math.hypot(dx, dy, dz);
       let hit = false;
+      const wasStrained = o.strain > 0;
       if (!o.large) {
         const focused =
           sucking &&
           d < 10 &&
           dx * direction.x + dy * direction.y + dz * direction.z > d * 0.65 &&
-          !lineBlocked(eye.x, eye.y, eye.z, o.x, o.y + 0.6, o.z);
+          !lineBlocked(eye.x, eye.y, eye.z, o.x, o.y + 1.5, o.z);
         o.strain = Math.max(0, o.strain + (focused ? dt : -dt * 2));
         o.mesh.position.x = o.x + Math.sin(time * 85) * o.strain * 0.2;
         o.mesh.rotation.z = Math.sin(time * 66) * o.strain * 0.13;
@@ -111,19 +112,22 @@ export class Destructibles {
         pd = Math.hypot(pdx, pdz);
       if (
         Math.abs(player.position.y - o.y) < 1.5 &&
-        pd < (o.large ? 1.55 : 0.85)
+        pd < (o.large ? 1.55 : 0.65)
       ) {
         if (o.large && player.speed >= 9) hit = true;
         else {
-          const push = (o.large ? 1.55 : 0.85) - pd;
+          const push = (o.large ? 1.55 : 0.65) - pd;
           player.position.x += (pd > 0.001 ? pdx / pd : 1) * push;
           player.position.z += (pd > 0.001 ? pdz / pd : 0) * push;
         }
       }
+      if (o.strain > 0 || wasStrained) this.write(o);
       if (hit) {
         o.broken = true;
         o.mesh.visible = false;
-        const centerY = o.y + (o.large ? 1.1 : 0.6);
+        o.mesh.userData.broken = true;
+        this.write(o);
+        const centerY = o.y + 1.5;
         this.coins.burst(o.x, centerY, o.z, o.coins);
         this.onBurst(o.x, centerY, o.z, o.coins);
         destroyed++;

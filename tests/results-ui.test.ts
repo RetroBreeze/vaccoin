@@ -167,3 +167,39 @@ it("marks your leaderboard row with supported pixel-font brackets", () => {
   );
   vi.unstubAllGlobals();
 });
+
+it("draws gameplay achievement notices below the score and timer", () => {
+  vi.stubGlobal("innerWidth", 540);
+  vi.stubGlobal("innerHeight", 720);
+  const control = () =>
+    ({
+      style: {},
+      addEventListener: vi.fn(),
+      setAttribute: vi.fn(),
+    }) as unknown as HTMLButtonElement;
+  const ctx = { fillRect: vi.fn() };
+  const ui = new UI(
+    { getContext: () => ctx } as unknown as HTMLCanvasElement,
+    control(),
+    control(),
+    control(),
+  );
+  vi.mocked(pixelText).mockClear();
+  ui.drawAchievements(
+    {
+      phase: "playing",
+      achievementNotice: {
+        id: "run-coins-500",
+        title: "First haul",
+        description: "Collect 500 coins in one run.",
+      },
+    } as UIState,
+    control(),
+  );
+  const title = vi
+    .mocked(pixelText)
+    .mock.calls.find((call) => call[1] === "ACHIEVEMENT UNLOCKED");
+  expect(title).toBeDefined();
+  expect(title![3]).toBeGreaterThanOrEqual(90);
+  vi.unstubAllGlobals();
+});

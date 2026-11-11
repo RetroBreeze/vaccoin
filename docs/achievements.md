@@ -10,14 +10,17 @@ by `supagame achievement create`, not handwritten SQL. `run-coins-*` IDs are
 stable. Icons use Vaccoin's pixel coin rendering.
 
 The title screen's ACHIEVEMENTS button opens all six entries. The Supagame
-headless notification queue holds awards during play and displays four-second
-Canvas cards during results or on the title screen. Multiple awards appear in
-threshold order. Escape/BACK returns to the title. Backend failures leave a
-clear unavailable status and never claim local scores earned an achievement.
+headless notification queue displays four-second Canvas cards as the live run
+reaches each coin threshold, below the score and timer during gameplay. Multiple
+awards appear in threshold order, and hidden tabs pause the queue. Each milestone
+is announced once per page session; later server confirmations do not repeat it.
+Saved unlocks are skipped. Escape/BACK returns to the title. Backend failures
+leave a clear unavailable status; live celebrations also work offline, while
+permanent unlocks in the achievement list still require an accepted score.
 
 Historical accepted personal bests are backfilled during definition migration.
-Those unlocks remain in the list but do not generate pop-ups. New awards come
-only from accepted server-side score records. Lost anonymous identities retain
+Those unlocks remain in the list but do not generate pop-ups. New permanent
+awards come only from accepted server-side score records. Lost anonymous identities retain
 the same recovery limits as existing leaderboard identities.
 
 ## Local package and deployment workflow

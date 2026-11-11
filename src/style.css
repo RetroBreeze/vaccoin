@@ -274,11 +274,51 @@ canvas {
   #player-name {
     top: 40%;
     width: min(280px, 50vw);
-    font-size: 10px;
+    font-size: 2.56vh;
   }
   #display-name {
-    margin: 2px 0;
-    padding: 4px 8px;
-    font-size: 14px;
+    margin: 0.51vh 0;
+    padding: 1.03vh 8px;
+    font-size: 3.59vh;
   }
+}
+
+#saved-player-name {
+  position: fixed;
+  z-index: 3;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #ffcf58;
+  font-size: 2.5vh;
+}
+#current-player-name {
+  display: block;
+  overflow-wrap: anywhere;
+}
+#saved-player-name button,
+#name-actions button {
+  border: 1px solid #96b6c2;
+  padding: 0.5vh 10px;
+  background: #102837;
+  color: #fff2d2;
+  font: inherit;
+  font-size: 1.7vh;
+  cursor: pointer;
+}
+#saved-player-name button {
+  margin-top: 1vh;
+}
+#name-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 0.5vh;
+}
+#saved-player-name button:focus-visible,
+#name-actions button:focus-visible {
+  outline: 2px solid #ffcf58;
+  outline-offset: 2px;
+}
+#name-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

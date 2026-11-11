@@ -10,7 +10,7 @@ function browserStorage(): StorageLike | undefined {
     return undefined;
   }
 }
-function normalize(value: string): string | undefined {
+export function normalizeDisplayName(value: string): string | undefined {
   const name = value.trim();
   const length = Array.from(name).length;
   return length >= 3 &&
@@ -24,18 +24,18 @@ export class DisplayName {
   private key = KEY;
   bind(scope: string, adoptLegacy = false) {
     this.key = `${KEY}:${scope}`;
-    try { this.name = normalize(this.storage?.getItem(this.key) ?? "") ?? (adoptLegacy ? this.name : ""); }
+    try { this.name = normalizeDisplayName(this.storage?.getItem(this.key) ?? "") ?? (adoptLegacy ? this.name : ""); }
     catch { if (!adoptLegacy) this.name = ""; }
   }
   constructor(private storage: StorageLike | undefined = browserStorage()) {
     try {
-      this.name = normalize(storage?.getItem(KEY) ?? "") ?? "";
+      this.name = normalizeDisplayName(storage?.getItem(KEY) ?? "") ?? "";
     } catch {
       // A name can still be chosen for this session.
     }
   }
   save(value: string): boolean {
-    const name = normalize(value);
+    const name = normalizeDisplayName(value);
     if (!name) return false;
     this.name = name;
     try {

@@ -261,14 +261,15 @@ export class UI {
       }
     }
     const a = s.achievementNotice;
-    if (a && s.phase !== "playing" && !s.achievementsOpen) {
-      this.rect(cx - 235, 12, 470, 67, "#071b2bf5");
-      this.rect(cx - 235, 12, 4, 67, C.gold);
-      this.rect(cx - 219, 32, 18, 22, C.gold);
-      this.rect(cx - 214, 35, 5, 15, "#b87926");
-      this.text("ACHIEVEMENT UNLOCKED", cx - 188, 23, 1, C.mint);
-      this.text(a.title.toUpperCase(), cx - 188, 38, 2, C.gold);
-      this.text(a.description.toUpperCase(), cx - 188, 61, 1, C.white);
+    if (a && !s.achievementsOpen) {
+      const y = s.phase === "playing" ? 90 : 12;
+      this.rect(cx - 235, y, 470, 67, "#071b2bf5");
+      this.rect(cx - 235, y, 4, 67, C.gold);
+      this.rect(cx - 219, y + 20, 18, 22, C.gold);
+      this.rect(cx - 214, y + 23, 5, 15, "#b87926");
+      this.text("ACHIEVEMENT UNLOCKED", cx - 188, y + 11, 1, C.mint);
+      this.text(a.title.toUpperCase(), cx - 188, y + 26, 2, C.gold);
+      this.text(a.description.toUpperCase(), cx - 188, y + 49, 1, C.white);
     }
   }
   draw(s: UIState, dt: number) {

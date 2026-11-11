@@ -21,7 +21,7 @@ import { Round } from "./round";
 import { Leaderboard } from "./supagame";
 import { configuredGameConnection } from "./game-services";
 import { UI, UIState } from "./ui";
-import { DisplayName } from "./display-name";
+import { DisplayName, normalizeDisplayName } from "./display-name";
 import { PlayIntent } from "./input";
 import { GamepadControls } from "./controls";
 import { TouchControls } from "./touch-controls";
@@ -35,6 +35,20 @@ async function boot() {
     status = document.querySelector<HTMLParagraphElement>("#status")!;
   const namePanel = document.querySelector<HTMLDivElement>("#player-name")!;
   const nameInput = document.querySelector<HTMLInputElement>("#display-name")!;
+  const savedNamePanel =
+    document.querySelector<HTMLDivElement>("#saved-player-name")!;
+  const currentName = document.querySelector<HTMLElement>(
+    "#current-player-name",
+  )!;
+  const changeName = document.querySelector<HTMLButtonElement>("#change-name")!;
+  const saveNameButton =
+    document.querySelector<HTMLButtonElement>("#save-name")!;
+  const cancelNameButton =
+    document.querySelector<HTMLButtonElement>("#cancel-name")!;
+  const nameActions = document.querySelector<HTMLDivElement>("#name-actions")!;
+  const nameHelp = document.querySelector<HTMLElement>("#name-help")!;
+  let editingName = false,
+    savingName = false;
   const retryButton = button.cloneNode(false) as HTMLButtonElement;
   retryButton.id = "retry-leaderboard";
   retryButton.textContent = "RETRY RANKINGS";
@@ -219,6 +233,61 @@ async function boot() {
   window.addEventListener('online', () => void workshop.sync());
   window.addEventListener('focus', () => void workshop.sync());
   setInterval(() => { if (!document.hidden) void workshop.sync(); }, 30000);
+  changeName.addEventListener("click", () => {
+    editingName = true;
+    nameInput.value = profile.name;
+    nameInput.setCustomValidity("");
+    nameHelp.textContent = "3–24 characters";
+    namePanel.hidden = false;
+    savedNamePanel.hidden = true;
+    nameActions.hidden = false;
+    nameInput.focus();
+    nameInput.select();
+  });
+  function cancelNameEdit() {
+    if (savingName) return;
+    editingName = false;
+    nameInput.value = profile.name;
+    nameInput.setCustomValidity("");
+    nameActions.hidden = true;
+    requestAnimationFrame(() => changeName.focus());
+  }
+  async function saveNameEdit() {
+    if (savingName) return;
+    const value = normalizeDisplayName(nameInput.value);
+    if (!value) {
+      nameInput.setCustomValidity(
+        "Enter a display name with 3–24 characters and no control characters.",
+      );
+      nameInput.reportValidity();
+      nameInput.focus();
+      return;
+    }
+    savingName = true;
+    saveNameButton.disabled =
+      cancelNameButton.disabled =
+      nameInput.disabled =
+        true;
+    saveNameButton.textContent = "Saving...";
+    try {
+      await leaderboard.rename(value);
+      profile.save(value);
+      editingName = false;
+      nameActions.hidden = true;
+      requestAnimationFrame(() => changeName.focus());
+    } catch {
+      nameHelp.textContent = "Couldn't save. Try again.";
+    } finally {
+      savingName = false;
+      saveNameButton.disabled =
+        cancelNameButton.disabled =
+        nameInput.disabled =
+          false;
+      saveNameButton.textContent = "Save";
+    }
+  }
+  saveNameButton.addEventListener("click", () => void saveNameEdit());
+  cancelNameButton.addEventListener("click", cancelNameEdit);
   const browse = (mode: "top" | "around") =>
     void leaderboard.browse(mode, !!profile.name);
   function closeLeaderboard() {
@@ -350,6 +419,10 @@ async function boot() {
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
     if (leaderboardOpen || achievementsOpen || workshopUI.open || accounts.open || accounts.busy) return;
+    if (editingName) {
+      void saveNameEdit();
+      return;
+    }
     if (requesting) return;
     if (!profile.name) {
       if (!profile.save(nameInput.value)) {
@@ -449,7 +522,12 @@ async function boot() {
     if (e.target instanceof HTMLInputElement) {
       if (e.code === "Enter" && !e.repeat) {
         e.preventDefault();
-        void play();
+        if (editingName) void saveNameEdit();
+        else void play();
+      }
+      if (e.code === "Escape" && editingName) {
+        e.preventDefault();
+        cancelNameEdit();
       }
       return;
     }
@@ -615,17 +693,21 @@ async function boot() {
     }
     if (round.phase === "title") {
       const layout = titleLayout(ui.w);
-      namePanel.style.left = `${(layout.nameX / ui.w) * 100}%`;
-      namePanel.style.top = `${(layout.nameY / 540) * 100}%`;
-      namePanel.style.width = `${(256 / ui.w) * 100}%`;
+      for (const panel of [namePanel, savedNamePanel]) {
+        panel.style.left = `${(layout.nameX / ui.w) * 100}%`;
+        panel.style.top = `${((layout.nameY - (panel === namePanel && editingName ? (layout.stacked ? 24 : 44) : 0)) / 540) * 100}%`;
+        panel.style.width = `${(256 / ui.w) * 100}%`;
+      }
     }
     const titleVisible = round.phase === "title" && !leaderboardOpen && !achievementsOpen && !workshopUI.open && !accounts.open;
-    namePanel.hidden = !titleVisible || !!profile.name;
+    namePanel.hidden = !titleVisible || (!!profile.name && !editingName);
+    savedNamePanel.hidden = !titleVisible || !profile.name || editingName;
+    currentName.textContent = profile.name;
     uiState.liveEntries = leaderboard.liveEntries;
     uiState.liveStatus = leaderboard.liveStatus;
     uiState.rankNotice =
       Date.now() < leaderboard.rankNoticeUntil ? leaderboard.rankNotice : "";
-    leaderboard.achievements.update(round.phase, document.hidden);
+    leaderboard.achievements.update(round.phase, document.hidden, round.score);
     uiState.achievementsOpen = achievementsOpen;
     uiState.achievements = leaderboard.achievements.rows;
     uiState.achievementStatus = leaderboard.achievements.status;
@@ -734,6 +816,7 @@ async function boot() {
           round.startedAt = performance.now() - 60001;
           finishIfExpired();
         },
+        collect: (count: number) => round.collect(count),
         expire: () => {
           round.startedAt = performance.now() - 60001;
           finishIfExpired();

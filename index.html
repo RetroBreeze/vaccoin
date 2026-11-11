@@ -53,6 +53,10 @@
         VAC
       </button>
     </div>
+    <div id="saved-player-name" hidden>
+      <strong id="current-player-name"></strong>
+      <button id="change-name" type="button">Change name</button>
+    </div>
     <div id="player-name" hidden>
       <label for="display-name">DISPLAY NAME</label>
       <input
@@ -63,7 +67,11 @@
         placeholder="Your name"
         aria-describedby="name-help"
       />
-      <span id="name-help">3–24 characters</span>
+      <span id="name-help" role="status">3–24 characters</span>
+      <div id="name-actions" hidden>
+        <button id="save-name" type="button">Save</button>
+        <button id="cancel-name" type="button">Cancel</button>
+      </div>
     </div>
     <p id="status" role="status" aria-live="polite">Loading...</p>
     <script type="module" src="/src/main.ts"></script>

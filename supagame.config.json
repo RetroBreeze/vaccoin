@@ -97,5 +97,8 @@
         "threshold": 20000
       }
     }
+  ],
+  "origins": [
+    "https://vaccoin.pages.dev"
   ]
 }

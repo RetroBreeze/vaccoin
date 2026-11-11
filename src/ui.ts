@@ -115,6 +115,8 @@ export class UI {
     height: number,
     active = false,
   ) {
+    height = Math.max(height, Math.min(64, 44 * 540 / innerHeight));
+    this.rect(x + 3, y + 4, width, height, "#061b28");
     this.rect(x, y, width, height, active ? C.gold : C.dark);
     this.text(
       label,
@@ -256,7 +258,7 @@ export class UI {
           layout.left + 4,
           layout.menuY + 60,
           124,
-          30,
+          48,
         );
       }
     }
@@ -336,7 +338,7 @@ export class UI {
             layout.left - 128,
             layout.menuY + 60,
             124,
-            30,
+            48,
           );
       }
     } else {

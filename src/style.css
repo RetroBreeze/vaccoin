@@ -322,3 +322,44 @@ canvas {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* Keep native controls comfortable at both phone and desktop sizes. */
+.utility {
+  width: 48px;
+  height: 48px;
+}
+#sound {
+  min-width: 48px;
+  min-height: 48px;
+}
+#player-name, #saved-player-name {
+  font-size: clamp(12px, 1.7vh, 18px);
+}
+#display-name {
+  min-height: 44px;
+  font-size: max(16px, 2.5vh);
+}
+#saved-player-name button, #name-actions button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: clamp(12px, 1.7vh, 16px);
+  border-width: 2px;
+  box-shadow: 0 3px #061b28;
+}
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:active {
+  filter: brightness(1.18);
+}
+#display-message {
+  top: max(64px, calc(env(safe-area-inset-top) + 58px));
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #saved-player-name button, #name-actions button {
+    min-height: 36px;
+    padding: 5px 12px;
+  }
+  #display-name { min-height: 36px; }
+}

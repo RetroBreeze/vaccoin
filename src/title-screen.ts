@@ -1,5 +1,46 @@
 import { pixelText, textWidth } from "./pixel-font";
+import { makeCoinGeometry } from "./coin-geometry";
+import { Euler, Matrix4, Vector3 } from "three";
 import type { UIState } from "./ui";
+
+const logo = typeof Image === "undefined" ? null : new Image();
+if (logo) logo.src = "/assets/logo.png";
+const coinGeometry = makeCoinGeometry();
+const coinPositions = coinGeometry.getAttribute("position");
+const coinUV = coinGeometry.getAttribute("uv");
+const coinEuler = new Euler();
+const rotation = new Matrix4();
+const vertex = new Vector3();
+const faces = Array.from({ length: coinPositions.count / 3 }, () => ({
+  points: Array.from({ length: 3 }, () => new Vector3()), depth: 0, color: "",
+}));
+const ordered = [...faces];
+function drawCoin(c: CanvasRenderingContext2D, x: number, y: number, size: number, angle: number) {
+  rotation.makeRotationFromEuler(coinEuler.set(1.1 + angle * 0.3, angle, angle * 0.4));
+  for (let i = 0; i < faces.length; i++) {
+    const face = faces[i];
+    face.depth = 0;
+    for (let j = 0; j < 3; j++) {
+      vertex.fromBufferAttribute(coinPositions, i * 3 + j).applyMatrix4(rotation);
+      face.points[j].copy(vertex);
+      face.depth += vertex.z;
+    }
+    const v = coinUV.getY(i * 3);
+    face.color = v > 0.34 ? "#986020" : v < 0.27 ? "#ffe394" : "#efb83e";
+  }
+  // Painter ordering preserves the raised bevel and thickness while tumbling.
+  ordered.sort((a, b) => a.depth - b.depth);
+  for (const face of ordered) {
+    c.beginPath();
+    face.points.forEach((p, j) => {
+      const px = x + p.x * size, py = y + p.y * size;
+      if (j === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    });
+    c.closePath();
+    c.fillStyle = face.color;
+    c.fill();
+  }
+}
 
 export function titleLayout(w: number) {
   const stacked = w < 800;
@@ -62,24 +103,33 @@ export function drawTitleScreen(
   for (let i = 0; i < 65; i++) {
     const depth = 0.45 + (i % 5) * 0.15;
     const x = ((i * 137.51 + Math.sin(t * 0.6 + i) * 18) % (w + 30)) - 15;
-    const y = ((i * 83.7 + t * (34 + depth * 53)) % 590) - 25;
-    const radius = 4 + depth * 5;
-    const spin = Math.max(0.22, Math.abs(Math.cos(t * 2 + i)));
-    c.globalAlpha = 0.2 + depth * 0.35;
-    rect(x, y, radius * spin * 2, radius * 2, "#b87926");
-    rect(x, y, radius * spin * 2 - 2, radius * 2 - 2, gold);
-    rect(x + 2, y + 2, Math.max(1, radius * spin - 2), radius - 1, "#fff3ba");
+    const y = ((i * 83.7 + t * (85 + depth * 132.5)) % 590) - 25;
+    c.globalAlpha = 0.25 + depth * 0.35;
+    drawCoin(c, x, y, 45 + depth * 35, t * (0.7 + depth) + i);
   }
   c.globalAlpha = 1;
-  const logoY = g.stacked ? 44 : 132;
-  const logoSize = g.stacked ? 7 : Math.min(10, Math.floor((w * 0.44) / 42));
-  text("VACCOIN", g.left + 4, logoY + 6, logoSize, "#704e27", "center");
-  text("VACCOIN", g.left, logoY, logoSize, gold, "center");
-  if (!g.stacked) {
-    rect(g.left - 24, 65, 48, 44, "#b87926");
-    rect(g.left - 20, 61, 40, 44, gold);
-    rect(g.left - 14, 67, 28, 32, "#f4ad38");
-    text("V", g.left, 72, 3, "#fff2d2", "center");
+  // 90 BPM: fast attack, damped recoil, then rest between beats.
+  const beatTime = t * 1.5;
+  const beat = beatTime % 1;
+  const pulse = reduced
+    ? 1
+    : 1 + 0.13 * Math.sin(beat * Math.PI * 6) * Math.exp(-beat * 9);
+  const logoW = Math.min(g.stacked ? w - 70 : w * 0.43, 500) * pulse;
+  const logoH = logoW / 3;
+  const logoY = g.stacked ? 51 : 145;
+  if (logo?.complete && logo.naturalWidth) {
+    c.save();
+    c.imageSmoothingEnabled = true;
+    c.translate(g.left, logoY);
+    // Alternate a six-degree kick left and right on successive beats.
+    const direction = Math.floor(beatTime) % 2 === 0 ? 1 : -1;
+    const tilt = reduced ? 0 : direction * (Math.PI / 30)
+      * Math.sin(beat * Math.PI * 3) * Math.exp(-beat * 4);
+    c.rotate(tilt);
+    c.drawImage(logo, -logoW / 2, -logoH / 2, logoW, logoH);
+    c.restore();
+  } else {
+    text("VACCOIN", g.left, logoY - 14, 5, gold, "center");
   }
   const { boardX: x, boardY: y, boardW: bw, boardH: bh } = g;
   rect(x + 5, y + 6, bw, bh, "#020d17bb");

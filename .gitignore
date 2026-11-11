@@ -5,3 +5,8 @@ dist/
 KayKit_Bits_Bundle2_1.0/
 .superpowers/
 test-results/
+/supabase/functions/.env
+/supabase/.temp/
+/supabase/.branches/
+/.supagame-deploy-lock/
+/.supagame-stage/

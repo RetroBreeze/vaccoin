@@ -91,6 +91,10 @@ it("rolls title entries without network activity and renders live states and not
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    fill: vi.fn(),
     rect: vi.fn(),
     clip: vi.fn(),
   };

@@ -39,6 +39,24 @@ export class Accounts {
   ) {
     this.key = `vaccoin.account-flow:${namespace}`;
   }
+  get canStartFresh() { return !this.workshop.ready; }
+  async deleteCloudSave() {
+    if (this.busy || this.review) return;
+    this.busy = true;
+    try {
+      await this.workshop.deleteCloudSave();
+      this.message = "Cloud save deleted. Historical backups may remain. Choose Start Fresh.";
+    } catch {
+      this.message = "Deletion unconfirmed. Uploads paused. Reconnect and retry Delete Cloud Save.";
+    } finally { this.busy = false; }
+  }
+  async startFresh() {
+    if (this.busy || this.review) return;
+    this.busy = true;
+    try { await this.workshop.startFresh(); this.message = this.workshop.status; }
+    catch (error) { this.report(error); }
+    finally { this.busy = false; }
+  }
   private report(error: unknown) {
     if (error instanceof SaveConflictError) this.needsReview = true;
     this.message =

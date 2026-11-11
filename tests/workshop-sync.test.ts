@@ -1,5 +1,5 @@
 import { it, expect, vi } from "vitest";
-import { Workshop, type WorkshopRecord } from "../src/workshop";
+import { Workshop, RESET_SLOT, type WorkshopRecord } from "../src/workshop";
 import { emptyProgress, applyOperation } from "../src/workshop-state";
 import {
   ApiError,
@@ -50,7 +50,9 @@ function fixture() {
   } as unknown as Saves;
   const make = () =>
     new Workshop({
-      saves,
+      saves: { ...saves, load: (slot, ...args) => slot === RESET_SLOT
+        ? Promise.reject(new ApiError(404, "SAVE_NOT_FOUND", "missing"))
+        : saves.load(slot, ...args) },
       store,
       identity: async () => player,
       namespace: "test",

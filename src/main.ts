@@ -179,6 +179,7 @@ async function boot() {
   const workshopUI = new WorkshopUI(ui, workshop, open => {
     if (open) { leaderboardOpen = false; achievementsOpen = false; pauseControls(); }
   });
+  let runSaveGeneration = workshop.generation;
   let runOwner: string | null = null;
   const prepareWorkshop = async () => {
     if (connection && navigator.onLine) {
@@ -391,6 +392,7 @@ async function boot() {
   function startRound() {
     round.start(performance.now());
     runOwner = workshop.owner;
+    runSaveGeneration = workshop.generation;
     player.reset();
     coins.reset();
     destructibles.reset();
@@ -565,7 +567,7 @@ async function boot() {
     audio.finish();
     const run = { id: round.id, score: round.score, durationMs: 60000 };
     void leaderboard.complete(run);
-    void workshop.complete(run, runOwner);
+    void workshop.complete(run, runOwner, runSaveGeneration);
     status.textContent = `Round complete. ${round.score} coins collected. Play again.`;
   }
   document.addEventListener("visibilitychange", () => {

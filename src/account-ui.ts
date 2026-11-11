@@ -5,14 +5,21 @@ import { pixelText, textWidth } from "./pixel-font";
 import { emptyProgress, validateProgress } from "./workshop-state";
 /** Native hit targets mirror Canvas controls for keyboard/touch accessibility. */
 export class AccountUI {
+  private deletionNotice = document.createElement("div");
   private buttons = new Map<string, HTMLButtonElement>();
-  private confirm?: SwitchStrategy | "signOut";
+  private confirm?: SwitchStrategy | "signOut" | "deleteSave";
   constructor(
     private ui: UI,
     readonly account: Accounts,
     private toggle: () => void,
   ) {
+    this.deletionNotice.id = "account-delete-description";
+    this.deletionNotice.textContent = "Delete Cloud Save removes cosmetic purchases and selections, wallet, total coins earned, completed runs, mute preference and saved operation records. Local saves and pending uploads are discarded. Leaderboards, achievements and your account remain unaffected. Historical backups may remain recoverable: up to five revisions for 30 days. This is not permanent erasure. A reset marker remains to block old uploads. Reload other devices with the updated game before playing. Choose Start Fresh after deletion.";
+    Object.assign(this.deletionNotice.style, {position: "fixed", left: "-10000px", width: "1px", height: "1px", overflow: "hidden"});
+    document.body.append(this.deletionNotice);
     const actions: Record<string, () => void> = {
+      deleteSave: () => { this.confirm = "deleteSave"; },
+      startFresh: () => void account.startFresh(),
       review: () => void account.reviewLatest(),
       open: () => {
         account.open = true;
@@ -42,7 +49,8 @@ export class AccountUI {
         account.economy = "guest";
       },
       confirm: () => {
-        if (this.confirm === "signOut") void account.signOut();
+        if (this.confirm === "deleteSave") void account.deleteCloudSave();
+        else if (this.confirm === "signOut") void account.signOut();
         else if (this.confirm) void account.resolve(this.confirm, true);
         this.confirm = undefined;
       },
@@ -65,6 +73,10 @@ export class AccountUI {
     }
   }
   draw(titleVisible: boolean) {
+    this.deletionNotice.hidden = !this.account.open || this.confirm !== "deleteSave";
+    const confirmButton = this.buttons.get("confirm")!;
+    if (this.confirm === "deleteSave") confirmButton.setAttribute("aria-describedby", this.deletionNotice.id);
+    else confirmButton.removeAttribute("aria-describedby");
     for (const b of this.buttons.values()) b.style.display = "none";
     const { ctx: c, w } = this.ui,
       cx = w / 2;
@@ -130,6 +142,25 @@ export class AccountUI {
       2,
       "#ffcf58",
     );
+    if (this.confirm === "deleteSave") {
+      text("DELETE CLOUD SAVE?", cx, 100, 2, "#ffcf58");
+      const lines = [
+        "DELETES COSMETIC PURCHASES AND SELECTIONS,",
+        "WALLET, TOTAL COINS, COMPLETED RUNS,",
+        "MUTE PREFERENCE AND SAVED OPERATION RECORDS.",
+        "LOCAL SAVES AND PENDING UPLOADS ARE DISCARDED.",
+        "LEADERBOARDS, ACHIEVEMENTS AND ACCOUNT STAY.",
+        "HISTORY MAY BE RECOVERABLE: LAST 5 / 30 DAYS.",
+        "THIS IS NOT PERMANENT ERASURE.",
+        "A RESET MARKER REMAINS TO BLOCK OLD UPLOADS.",
+        "UPDATE / RELOAD OTHER DEVICES BEFORE PLAYING.",
+        "AFTER DELETION, CHOOSE START FRESH.",
+      ];
+      lines.forEach((line, i) => text(line, cx, 145 + i * 20));
+      button("confirm", "DELETE CLOUD SAVE", cx - 130, 370);
+      button("decline", "CANCEL", cx - 130, 414);
+      return;
+    }
     if (this.confirm) {
       text(
         this.confirm === "signOut"
@@ -220,6 +251,10 @@ export class AccountUI {
         text("LINKED: " + a.status.providers.join(", ").toUpperCase(), cx, 145);
         button("signOut", "SIGN OUT", cx - 130, 210);
       } else button("signIn", "SIGN IN WITH GOOGLE", cx - 130, 180);
+      if (a.status.userId) {
+        button("deleteSave", "DELETE CLOUD SAVE", cx - 130, 270);
+        if (a.canStartFresh) button("startFresh", "START FRESH", cx - 130, 312);
+      }
       button(
         "back",
         a.status.isAnonymous ? "RETURN TO GUEST GAME" : "BACK TO GAME",

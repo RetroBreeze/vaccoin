@@ -25,6 +25,18 @@ async function fits(page, label) {
     results: "results-menu",
   }[view];
   await page.locator(`#${id}`).waitFor({ state: "visible" });
+  assert.equal(
+    await page.locator("#sound").isVisible(),
+    id === "lobby",
+    `${label}: sound belongs only on the main menu`,
+  );
+  if (id === "shop-menu" || id === "achievements-menu") {
+    assert.doesNotMatch(
+      await page.locator(`#${id}`).innerText(),
+      /CLOUD SAVED|SAVED ON DEVICE|SINGLE RUN \/ PERMANENT UNLOCKS/,
+      `${label}: no routine status clutter`,
+    );
+  }
   const geometry = await page.evaluate(() => {
     const screen = [...document.querySelectorAll(".menu-screen")].find(
       (e) => !e.hidden,
@@ -136,9 +148,9 @@ try {
     await tap(page, "#workshop-back");
     await tap(page, "#account-open");
     await fits(page, `account-${ref}`);
-    await tap(page, "#account-deleteSave");
-    await fits(page, `delete-${ref}`);
-    await tap(page, "#account-decline");
+    assert.equal(await page.locator("#account-signIn:visible").count(), 1);
+    assert.equal(await page.locator("#account-link:visible").count(), 0);
+    assert.equal(await page.locator("#account-deleteSave:visible").count(), 0);
     await tap(page, "#account-back");
     await tap(page, "#play");
     await page.waitForFunction(
@@ -160,7 +172,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS Pixel 9 landscape: no scrolling, controls visible, name editor, rankings, achievements, shop, account, deletion and no falling coins",
+    "PASS Pixel 9 landscape: no scrolling, controls visible, name editor, rankings, achievements, shop, guest sign-in without cloud deletion and no falling coins",
   );
 } finally {
   await browser.close();

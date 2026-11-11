@@ -161,7 +161,17 @@ export class WorkshopUI {
       !this.workshop.ready ||
       equipped ||
       (!owned && this.workshop.progress.wallet < item.cost);
-    p.text("status", this.workshop.status, "menu-note", details);
+    if (
+      this.workshop.status &&
+      ![
+        "CLOUD SAVED",
+        "SAVED ON DEVICE",
+        "LOCAL SHOP / NO CLOUD SESSION",
+        "CLOUD SELECTED / LOCAL COPY ARCHIVED",
+        "CLOUD SAVED / ACCOUNT PROGRESS SELECTED",
+      ].includes(this.workshop.status)
+    )
+      p.text("status", this.workshop.status, "menu-note", details);
     const actions = p.group("actions", "menu-actions", details);
     if (this.workshop.conflict) {
       p.text(

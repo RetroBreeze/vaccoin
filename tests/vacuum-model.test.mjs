@@ -29,6 +29,23 @@ it("retains the GLB surface sidedness when replacing materials for shop colours"
         expect(o.material.side, `Missing back faces on ${o.name}`).toBe(
           expected.get(o.name),
         );
+        const uv = o.geometry.getAttribute("uv");
+        expect(uv, `${o.name} needs texture coordinates`).toBeDefined();
+        expect(uv.count).toBe(o.geometry.getAttribute("position").count);
+        expect([...uv.array].every(Number.isFinite)).toBe(true);
+        // Every triangle must cover texture area, including intake and hose.
+        const index = o.geometry.index;
+        for (let i = 0; i < (index?.count ?? uv.count); i += 3) {
+          const [a, b, c] = [0, 1, 2].map((j) =>
+            index ? index.getX(i + j) : i + j,
+          );
+          const area =
+            (uv.getX(b) - uv.getX(a)) * (uv.getY(c) - uv.getY(a)) -
+            (uv.getY(b) - uv.getY(a)) * (uv.getX(c) - uv.getX(a));
+          expect(Math.abs(area), `${o.name} triangle ${i / 3}`).toBeGreaterThan(
+            1e-10,
+          );
+        }
         checked++;
       }
     });

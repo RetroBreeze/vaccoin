@@ -44,7 +44,6 @@ export class AccountUI {
         this.confirm = undefined;
         requestAnimationFrame(() => this.buttons.get("open")!.focus());
       },
-      link: () => void account.start("link"),
       signIn: () => void account.start("signIn"),
       signOut: () => {
         this.confirm = "signOut";
@@ -90,6 +89,8 @@ export class AccountUI {
   draw(_titleVisible: boolean) {
     const p = this.panel;
     const a = this.account;
+    const signedIn = !!a.status.userId && !a.status.isAnonymous;
+    if (!signedIn && this.confirm === "deleteSave") this.confirm = undefined;
     this.deletionNotice.hidden = !a.open || this.confirm !== "deleteSave";
     if (!a.open) {
       p.hide();
@@ -193,34 +194,24 @@ export class AccountUI {
       }
       button("export", "EXPORT RECOVERY");
     } else {
-      p.text(
-        "help",
-        a.status.isAnonymous
-          ? "Link to keep this player ID and progress."
-          : "Play anonymously or recover an account.",
-      );
-      if (a.status.isAnonymous) {
-        button("link", "LINK GOOGLE");
-        button("signIn", "SIGN IN WITH GOOGLE");
-      } else if (a.status.userId) {
-        p.text("providers", "Linked: " + a.status.providers.join(", "));
+      if (signedIn) {
         button("signOut", "SIGN OUT");
       } else button("signIn", "SIGN IN WITH GOOGLE");
-      if (a.status.userId) {
+      if (signedIn) {
         button("deleteSave", "DELETE CLOUD SAVE");
-        if (a.canStartFresh) button("startFresh", "START FRESH");
       }
+      if (a.status.userId && a.canStartFresh) button("startFresh", "START FRESH");
       button(
         "back",
         a.status.isAnonymous ? "RETURN TO GUEST GAME" : "BACK TO GAME",
       );
     }
-    p.text("status", a.busy ? "Working…" : a.message, "menu-note");
+    if (a.busy || a.message !== "PLAY AS A GUEST OR SIGN IN")
+      p.text("status", a.busy ? "Working…" : a.message, "menu-note");
     const actions = p.group("actions", "account-actions");
     for (const [id, label] of pending) {
       p.button(id, this.buttons.get(id)!, label, actions).disabled = a.busy;
     }
-    p.sound(actions);
     p.end();
   }
 }

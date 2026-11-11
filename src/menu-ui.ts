@@ -88,7 +88,7 @@ export class MenuUI {
       });
     }
     const sound = this.get("sound");
-    sound.style.display = s.phase === "playing" ? "none" : "";
+    sound.style.display = active === this.home && !s.menuCovered ? "" : "none";
     sound.textContent = s.muted ? "Sound off" : "Sound on";
     sound.setAttribute("aria-label", s.muted ? "Unmute sound" : "Mute sound");
     sound.dataset.muted = String(s.muted);
@@ -136,8 +136,6 @@ export class MenuUI {
     p.sound(actions);
     const board = p.group("board", "casino-panel lobby-board", grid);
     p.node("h2", "board-heading", "Top 10", "", board);
-    if (s.liveStatus !== "CONNECTED")
-      p.text("live", s.liveStatus ?? "CONNECTING", "live-status", board);
     const rows = p.node("ol", "rows", "", "standings", board);
     updateStandings(
       rows,
@@ -164,7 +162,6 @@ export class MenuUI {
     p.button("play", this.get("play"), "PLAY AGAIN", actions, true);
     p.button("menu", this.get("main-menu"), "MAIN MENU", actions);
     p.button("shop", this.get("workshop-open"), "SHOP", actions);
-    p.sound(actions);
     const board = p.group("board", "result-board");
     p.node("h2", "top", "Top 10", "", board);
     const rows = p.node("ol", "rows", "", "standings", board);
@@ -211,7 +208,6 @@ export class MenuUI {
         actions,
       );
     p.button("back", this.get("leaderboard-back"), "BACK", actions);
-    p.sound(actions);
     p.end();
   }
   private drawAchievements(s: UIState) {
@@ -234,11 +230,13 @@ export class MenuUI {
         row,
       );
     }
-    if (s.achievementStatus && s.achievementStatus !== "CONNECTED")
+    if (
+      s.achievementStatus &&
+      !["CONNECTED", "SINGLE RUN / PERMANENT UNLOCKS"].includes(s.achievementStatus)
+    )
       p.text("status", s.achievementStatus, "achievement-status");
     const actions = p.group("actions");
     p.button("back", this.get("achievements-open"), "BACK", actions);
-    p.sound(actions);
     p.end();
   }
   hide() {

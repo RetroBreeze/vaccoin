@@ -41,7 +41,7 @@ try {
     });
     page.on("pageerror", e => console.error("PAGE ERROR", e.message));
     pages.push(page);
-    await mockBackend(page, { savedName: true });
+    await mockBackend(page, { savedName: true, signedIn: true });
     await page.route("**/functions/v1/supagame/v1/**", async (route) => {
       if (!route.request().url().includes("/saves")) return route.fallback();
       if (width === 390 && offlineB) return route.abort("internetdisconnected");
@@ -86,7 +86,7 @@ try {
       receipts.set(body.operationId, next);
       return reply({ save: next });
     });
-    await page.route(`${origin}/delete-harness`, route => route.fulfill({contentType:'text/html', body:`<html><head><link rel="stylesheet" href="/src/style.css"></head><body class="casino-entered"><canvas width="960" height="540" style="width:100vw;height:100vh"></canvas><script type="module">
+    await page.route(`${origin}/delete-harness`, route => route.fulfill({contentType:'text/html', body:`<html><head><link rel="stylesheet" href="/src/style.css"></head><body class="casino-entered"><button id="sound">Sound on</button><canvas width="960" height="540" style="width:100vw;height:100vh"></canvas><script type="module">
       import { configuredGameConnection } from '/src/game-services.ts';
       import { Workshop } from '/src/workshop.ts';
       import { Accounts } from '/src/accounts.ts';

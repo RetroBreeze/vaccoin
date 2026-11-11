@@ -70,7 +70,10 @@ try {
   const palettes = ["default", "brick-red", "chrome", "hazard", "neon", "gold"];
   const colours = [];
   for (let i = 0; i < palettes.length; i++) {
-    if (i) await page.getByRole("button", { name: ">", exact: true }).click();
+    if (i)
+      await page
+        .getByRole("button", { name: "Next colour", exact: true })
+        .click();
     await page.waitForFunction(
       (id) => window.shopQA.panel.preview.colour === id,
       palettes[i],
@@ -104,7 +107,7 @@ try {
       throw Error("Colour not persisted");
     q.held.equip(restored.progress.equipped);
   });
-  await page.getByRole("button", { name: ">", exact: true }).click();
+  await page.getByRole("button", { name: "Next colour", exact: true }).click();
   await page.getByRole("button", { name: "EQUIP COLOUR", exact: true }).click();
   await page.waitForFunction(
     () => window.shopQA.shop.progress.equipped === "default",

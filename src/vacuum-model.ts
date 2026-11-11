@@ -1,6 +1,7 @@
 import * as T from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { COSMETICS, type Cosmetic } from "./workshop-state";
+import { textureVacuumGeometry, vacuumTexture } from "./vacuum-textures";
 
 export type VacuumMaterials = Map<string, T.MeshLambertMaterial>;
 const slots = ["body", "trim", "dark", "accent", "coupler"] as const;
@@ -17,7 +18,11 @@ export function createVacuumMaterials(): VacuumMaterials {
   const materials = new Map(
     slots.map((slot) => [
       slot,
-      new T.MeshLambertMaterial({ name: slot, flatShading: true }),
+      new T.MeshLambertMaterial({
+        name: slot,
+        flatShading: true,
+        map: vacuumTexture(slot),
+      }),
     ]),
   );
   applyVacuumColour(materials, COSMETICS[0]);
@@ -29,7 +34,16 @@ export async function loadVacuumModel(
 ): Promise<T.Group> {
   asset ??= new GLTFLoader()
     .loadAsync(`${import.meta.env.BASE_URL}assets/vacuum/vaccoin-vacuum.glb`)
-    .then((g) => g.scene);
+    .then((g) => {
+      g.scene.traverse((o) => {
+        if (o instanceof T.Mesh)
+          o.geometry = textureVacuumGeometry(
+            o.geometry,
+            (o.material as T.Material).name,
+          );
+      });
+      return g.scene;
+    });
   const model = (await asset).clone(true);
   model.traverse((o) => {
     if (!(o instanceof T.Mesh)) return;

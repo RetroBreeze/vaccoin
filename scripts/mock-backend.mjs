@@ -3,7 +3,7 @@ const achievementDefinitions = JSON.parse(await readFile(new URL('../src/achieve
 // Every browser check intercepts backend HTTP; no test score reaches hosted Supagame.
 export async function mockBackend(
   page,
-  { offline = false, savedName = false, appOrigin } = {},
+  { offline = false, savedName = false, signedIn = false, appOrigin } = {},
 ) {
   const playerId = "11111111-1111-4111-8111-111111111111";
   let name = "Mara",
@@ -65,9 +65,9 @@ export async function mockBackend(
       id: playerId,
       aud: "authenticated",
       role: "authenticated",
-      is_anonymous: true,
-      email: "",
-      app_metadata: { provider: "anonymous", providers: ["anonymous"] },
+      is_anonymous: !signedIn,
+      email: signedIn ? "mara@example.test" : "",
+      app_metadata: { provider: signedIn ? "google" : "anonymous", providers: [signedIn ? "google" : "anonymous"] },
       user_metadata: {},
       created_at: "2026-11-10T00:00:00Z",
     };

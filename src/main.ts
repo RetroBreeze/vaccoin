@@ -575,6 +575,7 @@ async function boot() {
     view.resize();
     ui.resize();
   });
+  void vacuum.load();
   function simulate(dt: number) {
     player.update(
       dt,
@@ -590,7 +591,7 @@ async function boot() {
     );
     keys.delete("Space");
     cameraToPlayer();
-    vacuum.update(dt, performance.now() / 1000, vacuumHeld, player.speed, rate);
+    vacuum.update(dt, performance.now() / 1000, vacuumHeld, player.speed, rate, player.velocity.y, player.grounded);
     round.destroyed += destructibles.update(
       dt,
       performance.now() / 1000,
@@ -654,7 +655,7 @@ async function boot() {
         (1 - Math.exp(-5 * elapsed));
       audio.coins(gainedFrame);
       if (gainedFrame > 5 && Math.random() < 0.25)
-        effects.burst(vacuum.target.x, vacuum.target.y, vacuum.target.z, 2);
+        effects.burst(vacuum.nozzleTarget.x, vacuum.nozzleTarget.y, vacuum.nozzleTarget.z, 2);
       const second = Math.ceil(round.remaining(now));
       if (second !== countdown) {
         countdown = second;

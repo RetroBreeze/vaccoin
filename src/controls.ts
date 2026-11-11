@@ -50,35 +50,62 @@ export class GamepadControls {
     return state;
   }
 }
-export type TouchAction = "move" | "look" | "jump";
+export type TouchAction = "move" | "look";
 export class TouchInput {
   moveX = 0;
   moveY = 0;
   vacuum = false;
   private pointers = new Map<
     TouchAction,
-    { id: number; x: number; y: number }
+    {
+      id: number;
+      x: number;
+      y: number;
+      startX: number;
+      startY: number;
+      startedAt: number;
+      dragged: boolean;
+    }
+  >();
+  private taps = new Map<
+    TouchAction,
+    { x: number; y: number; endedAt: number }
   >();
   private dx = 0;
   private dy = 0;
   private jump = false;
-  begin(action: TouchAction, id: number, x: number, y: number): boolean {
+  begin(
+    action: TouchAction,
+    id: number,
+    x: number,
+    y: number,
+    now = performance.now(),
+  ): boolean {
     if (this.pointers.has(action)) return false;
-    this.pointers.set(action, { id, x, y });
-    if (action === "jump") this.jump = true;
+    this.pointers.set(action, {
+      id,
+      x,
+      y,
+      startX: x,
+      startY: y,
+      startedAt: now,
+      dragged: false,
+    });
     if (action === "look") this.vacuum = true;
     return true;
   }
   move(id: number, x: number, y: number) {
     for (const [action, pointer] of this.pointers) {
       if (pointer.id !== id) continue;
+      if (Math.hypot(x - pointer.startX, y - pointer.startY) > 16)
+        pointer.dragged = true;
       const dx = x - pointer.x,
         dy = y - pointer.y;
       if (action === "move") {
         const radius = Math.max(48, Math.hypot(dx, dy));
         this.moveX = dx / radius;
         this.moveY = -dy / radius;
-      } else if (action === "look" || action === "jump") {
+      } else {
         this.dx += dx;
         this.dy += dy;
         pointer.x = x;
@@ -86,10 +113,32 @@ export class TouchInput {
       }
     }
   }
-  end(id: number): boolean {
+  end(id: number, now = performance.now(), cancelled = false): boolean {
     for (const [action, pointer] of this.pointers) {
       if (pointer.id !== id) continue;
       this.pointers.delete(action);
+      // Only completed, short taps qualify. Track each side independently so
+      // two thumbs touching together cannot accidentally jump.
+      const previous = this.taps.get(action);
+      this.taps.delete(action);
+      if (!cancelled && !pointer.dragged && now - pointer.startedAt <= 250) {
+        if (
+          previous &&
+          pointer.startedAt - previous.endedAt <= 300 &&
+          Math.hypot(
+            pointer.startX - previous.x,
+            pointer.startY - previous.y,
+          ) <= 32
+        ) {
+          this.jump = true;
+        } else {
+          this.taps.set(action, {
+            x: pointer.startX,
+            y: pointer.startY,
+            endedAt: now,
+          });
+        }
+      }
       if (action === "move") this.moveX = this.moveY = 0;
       if (action === "look") this.vacuum = false;
       return true;
@@ -108,6 +157,7 @@ export class TouchInput {
   }
   clear() {
     this.pointers.clear();
+    this.taps.clear();
     this.moveX = this.moveY = this.dx = this.dy = 0;
     this.vacuum = this.jump = false;
   }

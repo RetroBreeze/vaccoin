@@ -742,11 +742,6 @@ async function boot() {
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
     uiState.locked = controlsActive();
-    uiState.controlHint = mobile
-      ? "LEFT MOVE / RIGHT LOOK / HOLD VAC"
-      : pad.connected
-        ? "STICKS MOVE + LOOK / A JUMP / RT VAC / START PAUSE"
-        : "WASD MOVE / MOUSE LOOK / CLICK VAC / SPACE JUMP / F FULLSCREEN";
     uiState.time =
       round.phase === "playing" ? Math.max(0, (now - round.startedAt) / 1000) : now / 1000;
     uiState.muted = audio.muted;

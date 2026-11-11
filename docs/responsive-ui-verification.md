@@ -57,3 +57,11 @@ Current validation: 174 unit tests in 30 files and production build pass. Pixel 
 - Flat, square controls use solid fills and colour changes for selection/presses, without bevels. Translucent blue-black panels retain the moving casino background with restrained gold borders.
 - `npm run build` passed (existing bundle-size advisory). `node scripts/landscape-ui-browser-test.mjs` passed all menu flows at 756×308, 808×360, 924×412, and 844×390, with no scrolling, overlapping controls, or undersized touch targets.
 - Visually inspected the Pixel 9 lobby, shop, and achievements captures and checked desktop font loading/rendering separately.
+
+## Touch gestures and UI cleanup (2026-11-11)
+
+- Removed the mobile jump button. Two short nearby taps on either control surface jump once; drags, holds, cancellation, pause/reset, and separate thumbs do not count as paired taps. Movement and aiming remain independent.
+- Replaced the boxed numeric start countdown with compact, centred READY / GET SET / GOLD! lettering and a small text shadow. The normal camera and three-second gameplay delay are retained.
+- Centred the compact pause panel and removed its control guide. Removed Sound and Sync from Shop; Back fills the action row, and colour arrows have descriptive accessible names. Existing automatic save and conflict recovery remain intact.
+- Verification: 186 tests pass; production build passes with the existing bundle-size advisory. Countdown browser checks pass for mobile double-tap jumping, single-tap rejection, centred pause, countdown freeze, resume, and desktop mouse capture. Full landscape menu checks pass at all four existing reference sizes, including 756×308 with no scrolling.
+- Browser timing checks now wait for asynchronous fullscreen/pointer-lock state changes before asserting results. Inspected screenshots of READY, pause, and the simplified shop.

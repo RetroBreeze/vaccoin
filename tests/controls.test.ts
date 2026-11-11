@@ -71,8 +71,6 @@ it("does not steal an active finger and clears held actions when cancelled", () 
   input.begin("move", 2, 100, 100);
   input.move(2, 0, 100);
   expect(input.moveX).toBe(0);
-  input.begin("jump", 3, 0, 0);
-  expect(input.consumeJump()).toBe(true);
   expect(input.consumeJump()).toBe(false);
   input.begin("look", 4, 0, 0);
   input.clear();
@@ -104,12 +102,12 @@ it("reports ownership on release so rejected extra fingers cannot clear held sty
   expect(input.vacuum).toBe(false);
 });
 
-it.each(["look", "jump"] as const)(
+it.each(["look"] as const)(
   "aims while holding %s without dropping or repeating the action",
   (action) => {
     const input = new TouchInput();
     input.begin(action, 1, 700, 300);
-    expect(input.consumeJump()).toBe(action === "jump");
+    expect(input.consumeJump()).toBe(false);
     input.move(1, 600, 200);
     expect(input.consumeLook()).toEqual([-100, -100]);
     expect(input.vacuum).toBe(action === "look");
@@ -123,3 +121,59 @@ it.each(["look", "jump"] as const)(
     expect(input.vacuum).toBe(false);
   },
 );
+
+it.each(["move", "look"] as const)(
+  "jumps once after two short taps on %s",
+  (action) => {
+    const input = new TouchInput();
+    input.begin(action, 1, 100, 100, 0);
+    input.end(1, 80);
+    expect(input.consumeJump()).toBe(false);
+    input.begin(action, 2, 105, 102, 180);
+    input.end(2, 240);
+    expect(input.consumeJump()).toBe(true);
+    expect(input.consumeJump()).toBe(false);
+    input.begin(action, 3, 100, 100, 300);
+    input.end(3, 360);
+    expect(input.consumeJump()).toBe(false);
+  },
+);
+it.each(["drag", "hold", "cancel", "far", "late", "clear", "other thumb"])(
+  "does not treat %s as a double tap",
+  (kind) => {
+    const input = new TouchInput();
+    input.begin("look", 1, 100, 100, 0);
+    if (kind === "drag") {
+      input.move(1, 150, 100);
+      input.move(1, 100, 100);
+    }
+    input.end(1, kind === "hold" ? 600 : 80, kind === "cancel");
+    if (kind === "clear") input.clear();
+    const time = kind === "late" ? 600 : kind === "hold" ? 700 : 180;
+    input.begin(
+      kind === "other thumb" ? "move" : "look",
+      2,
+      kind === "far" ? 200 : 100,
+      100,
+      time,
+    );
+    input.end(2, time + 60);
+    expect(input.consumeJump()).toBe(false);
+  },
+);
+it("keeps a held movement finger active while double tapping to jump and aim", () => {
+  const input = new TouchInput();
+  input.begin("move", 1, 100, 100, 0);
+  input.move(1, 125, 80);
+  input.begin("look", 2, 600, 100, 0);
+  input.end(2, 60);
+  input.begin("look", 3, 600, 100, 160);
+  input.end(3, 220);
+  expect(input.consumeJump()).toBe(true);
+  expect(input.moveX).toBeGreaterThan(0);
+  expect(input.moveY).toBeGreaterThan(0);
+  input.begin("look", 4, 600, 100, 300);
+  input.move(4, 650, 90);
+  expect(input.vacuum).toBe(true);
+  expect(input.consumeLook()).toEqual([50, -10]);
+});

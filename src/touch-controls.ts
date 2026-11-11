@@ -17,6 +17,7 @@ export class TouchControls {
             event.pointerId,
             event.clientX,
             event.clientY,
+            event.timeStamp,
           )
         )
           return;
@@ -28,7 +29,11 @@ export class TouchControls {
         this.input.move(event.pointerId, event.clientX, event.clientY);
       });
       const release = (event: PointerEvent) => {
-        if (this.input.end(event.pointerId)) delete target.dataset.held;
+        const cancelled = event.type !== "pointerup";
+        if (!cancelled)
+          this.input.move(event.pointerId, event.clientX, event.clientY);
+        if (this.input.end(event.pointerId, event.timeStamp, cancelled))
+          delete target.dataset.held;
       };
       target.addEventListener("pointerup", release);
       target.addEventListener("pointercancel", release);

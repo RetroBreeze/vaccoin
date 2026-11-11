@@ -101,7 +101,6 @@ export class MenuUI {
       const p = this.pause;
       p.begin();
       p.heading("Paused");
-      p.text("hint", s.controlHint ?? "", "menu-note");
       p.button("play", this.get("play"), "RESUME", undefined, true);
       p.end();
       return;

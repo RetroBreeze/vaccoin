@@ -35,6 +35,9 @@ try {
   });
   await mobile.locator("#play").tap();
   await mobile.clock.fastForward(250);
+  await mobile.waitForFunction(
+    () => window.vaccoinQA.snapshot().phase === "playing",
+  );
   const start = await snapshot(mobile);
   assert.equal(
     start.controlsActive,
@@ -89,10 +92,41 @@ try {
   await mobile.clock.fastForward(200);
   assert((await snapshot(mobile)).position[2] < start.position[2] - 0.1);
   await mobile.keyboard.up("w");
+  assert.equal(await mobile.locator("#touch-jump").count(), 0);
+  const grounded = await snapshot(mobile);
+  await mobile.touchscreen.tap(620, 140);
+  await mobile.clock.fastForward(60);
+  assert.equal(
+    (await snapshot(mobile)).position[1],
+    grounded.position[1],
+    "single tap does not jump",
+  );
+  await mobile.touchscreen.tap(620, 140);
+  await mobile.clock.fastForward(100);
+  assert(
+    (await snapshot(mobile)).position[1] > grounded.position[1] + 0.1,
+    "double tap jumps",
+  );
   await mobile.evaluate(() => window.dispatchEvent(new Event("blur")));
   assert.equal((await snapshot(mobile)).controlsActive, false);
   await mobile.clock.fastForward(20);
   assert.equal(await mobile.locator("#pause-menu").isVisible(), true);
+  assert.equal(await mobile.locator("#pause-menu .menu-note").count(), 0);
+  const pauseBox = await mobile
+    .locator("#pause-menu .menu-content")
+    .boundingBox();
+  assert(
+    Math.abs(pauseBox.x + pauseBox.width / 2 - 422) < 1,
+    "pause centred horizontally",
+  );
+  assert(
+    Math.abs(pauseBox.y + pauseBox.height / 2 - 195) < 1,
+    "pause centred vertically",
+  );
+  await mobile.screenshot({
+    path: "test-results/pause-centred.png",
+    scale: "css",
+  });
   await mobile.locator("#play").tap();
   await mobile.clock.fastForward(200);
   assert.equal((await snapshot(mobile)).controlsActive, true);
@@ -134,11 +168,14 @@ try {
   assert((await snapshot(desktop)).position[2] < before.position[2] - 0.1);
   await desktop.keyboard.up("w");
   await desktop.keyboard.press("Escape");
+  await desktop.waitForFunction(
+    () => !window.vaccoinQA.snapshot().controlsActive,
+  );
   assert.equal((await snapshot(desktop)).controlsActive, false);
   await desktop.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: fullscreen transition starts active, 3/2/1 freezes movement/scoring with timer at 60, desktop capture survives menu transition, later blur/Escape pause, Resume continues",
+    "PASS: fullscreen transition starts active, READY/GET SET/GOLD countdown freezes movement/scoring with timer at 60, double-tap jumping, centred pause, desktop capture survives menu transition, later blur/Escape pause, Resume continues",
   );
 } finally {
   await browser.close();

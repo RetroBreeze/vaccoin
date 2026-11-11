@@ -79,7 +79,6 @@ try {
   // Captured action fingers keep aiming and holding their action outside the button.
   for (const [id, dx] of [
     ["#touch-look", -130],
-    ["#touch-jump", 70],
   ]) {
     const point = await centre(mobile, id);
     const start = await snapshot(mobile);
@@ -108,7 +107,9 @@ try {
     assert.equal(await mobile.locator(id).getAttribute("data-held"), null);
     await mobile.waitForFunction(() => !window.vaccoinQA.snapshot().vacuumHeld);
   }
-  await mobile.getByRole("button", { name: "Jump", exact: true }).tap();
+  assert.equal(await mobile.locator("#touch-jump").count(), 0);
+  await mobile.touchscreen.tap(620, 140);
+  await mobile.touchscreen.tap(620, 140);
   await mobile.waitForFunction(
     () => window.vaccoinQA.snapshot().position[1] > 0.2,
   );
@@ -149,7 +150,7 @@ try {
   assert.equal((await snapshot(mobile)).locked, false);
   await context.close();
   console.log(
-    "PASS: mobile play without pointer lock/fullscreen support, simultaneous move/look/vacuum, aiming while holding VAC/JUMP outside their bounds, cancellation, jump, pause, portrait fallback and resume",
+    "PASS: mobile play without pointer lock/fullscreen support, simultaneous move/look/vacuum, aiming while holding vacuum, cancellation, double-tap jump, pause, portrait fallback and resume",
   );
 
   const page = await browser.newPage({

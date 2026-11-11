@@ -26,7 +26,6 @@ export class WorkshopUI {
       "previous",
       "next",
       "buy",
-      "sync",
       "cloud",
       "export",
     ]) {
@@ -51,7 +50,6 @@ export class WorkshopUI {
         ? this.workshop.equip(c.id)
         : this.workshop.purchase(c.id));
     };
-    this.buttons.get("sync")!.onclick = () => void this.workshop.sync();
     this.buttons.get("cloud")!.onclick = () => void this.workshop.useCloud();
     this.buttons.get("export")!.onclick = () =>
       void this.workshop.exportRecovery().then((data) => {
@@ -97,7 +95,12 @@ export class WorkshopUI {
     const item = COSMETICS[this.selected];
     const owned = this.workshop.progress.owned.includes(item.id);
     const equipped = this.workshop.progress.equipped === item.id;
-    p.button("previous", this.buttons.get("previous")!, "<", stage);
+    p.button(
+      "previous",
+      this.buttons.get("previous")!,
+      "<",
+      stage,
+    ).setAttribute("aria-label", "Previous colour");
     const preview = p.group("preview", "shop-preview-frame", stage);
     if (this.canvas.parentElement !== preview) preview.append(this.canvas);
     const context = this.canvas.getContext("2d")!;
@@ -119,7 +122,10 @@ export class WorkshopUI {
         "menu-note",
         preview,
       );
-    p.button("next", this.buttons.get("next")!, ">", stage);
+    p.button("next", this.buttons.get("next")!, ">", stage).setAttribute(
+      "aria-label",
+      "Next colour",
+    );
     p.text(
       "index",
       `${this.selected + 1} / ${COSMETICS.length}`,
@@ -176,9 +182,8 @@ export class WorkshopUI {
         "USE CLOUD / ARCHIVE LOCAL",
         actions,
       );
-    } else p.button("sync", this.buttons.get("sync")!, "SYNC NOW", actions);
+    }
     p.button("back", this.buttons.get("back")!, "BACK", actions);
-    p.sound(actions);
     p.end();
   }
 }

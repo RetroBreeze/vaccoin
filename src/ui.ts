@@ -19,7 +19,6 @@ export interface UIState {
   browseLoading?: boolean;
   browseCanRetry?: boolean;
   phase: Phase;
-  controlHint?: string;
   mobile?: boolean;
   score: number;
   zone?: string;
@@ -114,10 +113,15 @@ export class UI {
         s.remaining <= 10 && Math.sin(s.time * 9) > 0 ? "#ff9878" : C.white,
         "center",
       );
-      this.rect(cx - 1, 269, 3, 3, C.white);
       if (s.countdown && s.locked) {
-        this.rect(cx - 66, 202, 132, 122, "#102837e6");
-        this.text(String(s.countdown), cx, 230, 12, C.gold, "center");
+        const label =
+          s.countdown >= 3 ? "READY" : s.countdown === 2 ? "GET SET" : "GOLD!";
+        const size = 4;
+        const y = 270 - (7 * size) / 2;
+        this.text(label, cx + 2, y + 2, size, C.dark, "center");
+        this.text(label, cx, y, size, C.gold, "center");
+      } else {
+        this.rect(cx - 1, 269, 3, 3, C.white);
       }
       if (s.sucking) {
         this.rect(cx - 9, 269, 3, 1, C.mint);

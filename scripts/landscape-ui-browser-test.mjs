@@ -131,6 +131,8 @@ try {
     await tap(page, "#achievements-open");
     await tap(page, "#workshop-open");
     await fits(page, `shop-${ref}`);
+    assert.equal(await page.locator("#shop-menu #sound").count(), 0);
+    assert.equal(await page.locator("#workshop-sync").count(), 0);
     await tap(page, "#workshop-back");
     await tap(page, "#account-open");
     await fits(page, `account-${ref}`);

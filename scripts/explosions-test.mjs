@@ -18,7 +18,7 @@ try {
   await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
-  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked);
+  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked && window.vaccoinQA.snapshot().countdown === 0);
   await page.evaluate(() => window.vaccoinQA.teleport(-5, 0, 18));
   await page.evaluate(() =>
     document.dispatchEvent(new MouseEvent("mousedown", { button: 0 })),

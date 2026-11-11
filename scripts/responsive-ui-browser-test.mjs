@@ -100,7 +100,7 @@ try {
     await page.locator("#achievements-open").tap();
     await page.locator("#workshop-open").tap();
     await page
-      .getByRole("heading", { name: "The workshop", exact: true })
+      .getByRole("heading", { name: "Shop", exact: true })
       .waitFor();
     await page.screenshot({
       path: `test-results/casino-shop-${viewport.width}.png`,
@@ -112,7 +112,7 @@ try {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.locator("#play").tap();
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   for (let pause = 0; pause < 2; pause++) {
     await page.locator("#pause").tap();
@@ -136,9 +136,10 @@ try {
       });
     await page.locator("#play").tap();
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().controlsActive,
+      () => window.vaccoinQA.snapshot().controlsActive && window.vaccoinQA.snapshot().countdown === 0,
     );
   }
+  await page.waitForFunction(() => window.vaccoinQA.snapshot().countdown === 0);
   await page.evaluate(() => {
     window.vaccoinQA.collect(12000);
     window.vaccoinQA.expire();

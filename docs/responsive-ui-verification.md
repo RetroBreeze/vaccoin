@@ -24,3 +24,13 @@ Screenshots are in ignored `test-results/casino-entry.png`, `casino-menu-390.png
 Browser checks use Chromium emulation, not a physical iPhone or Android device. This environment uses SwiftShader software graphics. The broader legacy `workshop-browser-test.mjs` run timed out waiting for mouse gameplay; a reduced-resolution touch run was terminated before completion. `achievements-browser-test.mjs` exceeded its 7-second FIFO timing bound. The focused responsive suite covers the changed menu, notice, purchase and restoration flows, but this is not a claim that the full gameplay browser suite passed.
 
 OAuth fixtures were updated to handle the new entry screen after both successful and cancelled redirects, and to return a missing-save response for an absent reset marker rather than treating it as a workshop save.
+
+## Landscape and start corrections
+
+Removed the decorative menu slogans and entry captions. Sound now occupies a normal menu action slot. Compact landscape layouts show the lobby, rankings, achievements, shop, results, name editor and account confirmations without scrolling, with at least 48px button targets. Coin rain uses the original coin geometry, a cached rotation atlas, and a static reduced-motion rendering.
+
+`node scripts/landscape-ui-browser-test.mjs` passes at the installed Playwright Pixel 9 landscape browser viewport (756×308), fullscreen size (808×360), and 844×390 / 924×412. It checks content overflow, visible controls, touch target size, overlapping controls, all ten leaderboard entries, results and animated/static coin rain.
+
+`node scripts/start-countdown-browser-test.mjs` passes: a fullscreen transition that blurs the window no longer leaves a fresh round paused. Controls activate after the transition; 3/2/1 holds movement, aim, suction and scoring while preserving the full 60-second timer. Later blur/Escape still pauses and Resume continues the same round. This timing regression uses a controlled browser clock and reduced render resolution because the test environment uses software WebGL.
+
+Current unit suite: 170 tests in 29 files pass; production build passes. Name editing, public/nearby leaderboard, account controls and the complete responsive browser regression also pass after these corrections.

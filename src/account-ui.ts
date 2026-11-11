@@ -96,7 +96,6 @@ export class AccountUI {
       return;
     }
     p.begin();
-    p.text("kicker", "YOUR SEAT AT THE TABLE", "eyebrow");
     p.heading(
       a.review
         ? "Account already exists"
@@ -118,7 +117,7 @@ export class AccountUI {
       p.node("h2", "confirm-heading", "Delete cloud save?");
       p.text(
         "deletion",
-        this.deletionNotice.textContent!,
+        "Deletes purchases, wallet, run totals, preferences and pending local saves. Scores, achievements and account stay. Backups: up to 5 revisions / 30 days. Not permanent erasure. Reload other devices, then choose Start Fresh.",
         "deletion-description",
       );
       button("confirm", "DELETE CLOUD SAVE").setAttribute(
@@ -216,11 +215,12 @@ export class AccountUI {
         a.status.isAnonymous ? "RETURN TO GUEST GAME" : "BACK TO GAME",
       );
     }
-    p.text("status", a.busy ? "Working. Please wait…" : a.message, "menu-note");
+    p.text("status", a.busy ? "Working…" : a.message, "menu-note");
     const actions = p.group("actions", "account-actions");
     for (const [id, label] of pending) {
       p.button(id, this.buttons.get(id)!, label, actions).disabled = a.busy;
     }
+    p.sound(actions);
     p.end();
   }
 }

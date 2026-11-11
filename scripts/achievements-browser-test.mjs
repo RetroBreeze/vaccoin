@@ -31,7 +31,7 @@ try {
     await page.getByRole("button", { name: "BACK", exact: true }).click();
     await page.getByRole("button", { name: "PLAY", exact: true }).click();
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().phase === "playing",
+      () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
     );
     await page.evaluate(() => window.vaccoinQA.collect(12000));
     await page.waitForFunction(

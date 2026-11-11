@@ -122,11 +122,6 @@ canvas {
   color: var(--gold);
   animation: prompt-glow 2s ease-in-out infinite;
 }
-.entry-caption {
-  color: #b9a5b0;
-  font-size: 12px;
-  text-align: center;
-}
 @keyframes logo-beat {
   0%,
   50%,
@@ -301,13 +296,6 @@ body:not(.casino-entered) #sound {
   height: auto;
   margin: 8px 0 24px;
   filter: drop-shadow(0 8px 12px #0006);
-}
-.casino-ui .lobby-tagline {
-  font-family: Georgia, serif;
-  font-size: clamp(20px, 2.4vw, 28px);
-  line-height: 1.35;
-  margin-bottom: 26px;
-  max-width: 360px;
 }
 .lobby-intro > .primary {
   width: 100%;
@@ -684,28 +672,6 @@ canvas.shop-preview {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-height: 500px) and (min-width: 760px) {
-  .menu-screen {
-    padding-top: max(64px, calc(env(safe-area-inset-top) + 60px));
-  }
-  .lobby-intro {
-    padding-top: 0;
-  }
-  .lobby-logo {
-    max-width: 250px;
-    margin-bottom: 12px;
-  }
-  .casino-ui .lobby-tagline {
-    font-size: 20px;
-    margin-bottom: 16px;
-  }
-  .entry-caption {
-    display: none;
-  }
-  .entry-logo {
-    max-height: 40vh;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -752,4 +718,437 @@ body > .leaderboard-control {
 }
 body:not(.casino-entered) #achievement-toast {
   display: none;
+}
+/* Sound shares the native action layout instead of covering a phone's content. */
+.menu-screen #sound {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  min-height: 48px;
+}
+.lobby-intro .menu-actions .primary {
+  grid-column: 1 / -1;
+}
+.menu-screen {
+  isolation: isolate;
+}
+.menu-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.menu-screen .menu-content {
+  position: relative;
+  z-index: 1;
+}
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.shop-header h1,
+.shop-header .wallet-badge {
+  margin-bottom: 16px;
+}
+.shop-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+.shop-details {
+  min-width: 0;
+}
+#results-menu .menu-content {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.result-summary .menu-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.result-board {
+  min-width: 0;
+}
+.rankings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+.rankings-header h1,
+.rankings-header .menu-actions {
+  margin: 0;
+}
+.achievement-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 759px) and (orientation: portrait) {
+  .shop-body,
+  #results-menu .menu-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rankings-header {
+    display: block;
+  }
+  .rankings-header h1 {
+    margin-bottom: 12px;
+  }
+}
+/* Pixel 9 includes a 756×308 CSS viewport with browser chrome visible. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 600px) {
+  .menu-screen {
+    padding: max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+  .menu-content {
+    width: min(100%, 1120px);
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .casino-ui h1 {
+    font-size: 24px;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .casino-ui h2 {
+    font-size: 20px;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .casino-ui p {
+    margin-bottom: 6px;
+  }
+  .casino-ui .menu-note,
+  .menu-error {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .casino-button,
+  .casino-button.primary {
+    min-height: 48px;
+    padding: 6px;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+  .menu-actions {
+    gap: 8px;
+    margin: 8px 0 0;
+  }
+  .lobby-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    padding-top: 0;
+  }
+  .lobby-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    min-width: 0;
+  }
+  .lobby-logo {
+    height: 64px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    object-fit: contain;
+  }
+  .player-card {
+    min-height: 0;
+    padding: 6px;
+    margin: 0;
+  }
+  #saved-player-name {
+    gap: 8px;
+    font-size: 14px;
+  }
+  #saved-player-name button,
+  #name-actions button {
+    padding: 6px;
+    font-size: 11px;
+  }
+  #player-name {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 8px;
+  }
+  #player-name label {
+    grid-column: 1 / -1;
+    margin: 0;
+    line-height: 14px;
+    font-size: 11px;
+  }
+  #display-name {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    min-width: 0;
+  }
+  #name-help {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    font-size: 10px;
+    line-height: 12px;
+  }
+  #name-actions {
+    grid-column: 2;
+    grid-row: 2;
+    gap: 4px;
+    margin: 0;
+  }
+  .lobby-intro .menu-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+  .lobby-intro .menu-actions .primary {
+    grid-column: auto;
+  }
+  .lobby-board {
+    padding: 10px;
+  }
+  .lobby-board h2 {
+    font-size: 20px;
+  }
+  .live-status {
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .standings {
+    margin: 0;
+  }
+  .standing,
+  .standing.champion {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 8px;
+    min-height: 20px;
+    padding: 2px 6px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 15px;
+  }
+  .standing-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .standing-rank,
+  .champion .standing-rank {
+    font-size: 11px;
+  }
+  .standing-score {
+    white-space: nowrap;
+  }
+  #results-menu .menu-content {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .result-score {
+    font-size: 56px;
+  }
+  .result-stats {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .result-summary .menu-actions {
+    margin-top: 8px;
+  }
+  .result-board .standing {
+    min-height: 18px;
+    padding: 1px 6px;
+  }
+  .result-board > .casino-button {
+    margin-top: 6px;
+    width: 100%;
+  }
+  .rankings-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .rankings-header h1 {
+    margin: 0;
+  }
+  .rankings-header .menu-actions {
+    margin: 0;
+    flex-wrap: nowrap;
+  }
+  #rankings-menu .standings {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(6, 24px);
+    column-gap: 16px;
+  }
+  #rankings-menu .standings .standing {
+    min-width: 0;
+  }
+  #rankings-menu .board-empty {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    padding: 12px;
+  }
+  #rankings-menu > .menu-content > .menu-actions {
+    display: flex;
+    margin-top: 8px;
+  }
+  #achievements-menu .achievement-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .achievement-card {
+    padding: 6px;
+    min-width: 0;
+  }
+  .achievement-card h2 {
+    font-size: 14px;
+    line-height: 17px;
+    margin-bottom: 2px;
+  }
+  .achievement-card .menu-note {
+    font-size: 10px;
+    line-height: 12px;
+    margin-bottom: 2px;
+  }
+  .achievement-card .eyebrow {
+    font-size: 9px;
+    line-height: 12px;
+    letter-spacing: 0.08em;
+  }
+  .achievement-status {
+    font-size: 10px;
+    line-height: 12px;
+  }
+  #achievements-menu .menu-actions {
+    margin-top: 6px;
+  }
+  .shop-header {
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .shop-header h1,
+  .shop-header .wallet-badge {
+    margin: 0;
+  }
+  .shop-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+  }
+  .shop-stage {
+    margin-bottom: 4px;
+    gap: 8px;
+  }
+  .shop-preview-frame {
+    width: 100%;
+  }
+  .shop-display .eyebrow {
+    margin: 0;
+  }
+  .shop-details .shop-item {
+    font-size: 22px;
+  }
+  .shop-details .wallet-badge {
+    font-size: 12px;
+  }
+  .shop-details .primary {
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  .shop-details .menu-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .shop-details .menu-note {
+    font-size: 10px;
+  }
+  #account-menu .menu-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px 16px;
+    align-content: start;
+  }
+  #account-menu .menu-content > :not(.account-actions) {
+    grid-column: 1;
+    margin-bottom: 0;
+  }
+  #account-menu .account-actions {
+    grid-column: 2;
+    grid-row: 1 / span 8;
+    align-self: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+  #account-menu .account-email {
+    font-size: 11px;
+  }
+  .deletion-description {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .save-comparison {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+  .save-comparison .casino-panel {
+    padding: 8px;
+  }
+  .save-comparison h2 {
+    font-size: 16px;
+  }
+  .save-comparison .menu-note {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  #achievement-toast {
+    top: max(8px, env(safe-area-inset-top));
+    padding: 8px 12px;
+    width: min(360px, calc(100% - 24px));
+  }
+  #achievement-toast .eyebrow {
+    font-size: 9px;
+  }
+  #achievement-toast .toast-title {
+    font-size: 16px;
+  }
+  #achievement-toast .menu-note {
+    font-size: 10px;
+  }
+}
+#name-actions button {
+  min-width: 48px;
+}
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 600px) {
+  .shop-details .shop-item {
+    font-size: 20px;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .shop-details .wallet-badge {
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .shop-details .primary,
+  .shop-details .menu-note {
+    margin-bottom: 4px;
+  }
+  .shop-details .menu-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 4px;
+  }
 }

@@ -4,6 +4,7 @@ import { pixelText } from "./pixel-font";
 import { Phase } from "./round";
 import { Standing } from "./supagame";
 export interface UIState {
+  menuCovered?: boolean;
   achievementsOpen?: boolean;
   achievements?: Achievement[];
   achievementNotice?: Achievement | null;
@@ -24,6 +25,7 @@ export interface UIState {
   zone?: string;
   pickup?: string;
   remaining: number;
+  countdown?: number;
   best: number;
   sucking: boolean;
   locked: boolean;
@@ -113,6 +115,10 @@ export class UI {
         "center",
       );
       this.rect(cx - 1, 269, 3, 3, C.white);
+      if (s.countdown && s.locked) {
+        this.rect(cx - 66, 202, 132, 122, "#102837e6");
+        this.text(String(s.countdown), cx, 230, 12, C.gold, "center");
+      }
       if (s.sucking) {
         this.rect(cx - 9, 269, 3, 1, C.mint);
         this.rect(cx + 7, 269, 3, 1, C.mint);

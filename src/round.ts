@@ -6,20 +6,27 @@ export class Round {
   startedAt = 0;
   id = "";
   destroyed = 0;
-  start(now: number) {
+  private hasCountdown = false;
+  start(now: number, countdownSeconds = 0) {
     this.phase = "playing";
     this.score = 0;
     this.destroyed = 0;
-    this.startedAt = now;
+    this.hasCountdown = countdownSeconds > 0;
+    this.startedAt = now + countdownSeconds * 1000;
     this.id = createOperationId();
   }
   remaining(now: number) {
-    return Math.max(0, 60 - (now - this.startedAt) / 1000);
+    return Math.min(60, Math.max(0, 60 - (now - this.startedAt) / 1000));
   }
-  collect(count: number) {
+  countdown(now: number) {
+    return this.phase === "playing" && this.hasCountdown
+      ? Math.max(0, Math.ceil((this.startedAt - now) / 1000))
+      : 0;
+  }
+  collect(count: number, now = performance.now()) {
     if (!Number.isSafeInteger(count) || count < 0)
       throw new Error("Score must be a nonnegative whole number");
-    if (this.phase === "playing") this.score += count;
+    if (this.phase === "playing" && this.countdown(now) === 0) this.score += count;
   }
   tick(now: number) {
     if (this.phase === "playing" && this.remaining(now) <= 0) {

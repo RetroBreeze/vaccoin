@@ -47,7 +47,7 @@ try {
         })),
       );
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().phase === "playing",
+      () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
     );
     await page.evaluate(() => {
       window.vaccoinQA.workshopRun(12000);
@@ -124,7 +124,7 @@ try {
         })),
       );
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().phase === "playing",
+      () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
     );
     assert.equal(
       (await page.evaluate(() => window.vaccoinQA.snapshot())).workshop

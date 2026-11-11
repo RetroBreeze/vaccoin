@@ -37,7 +37,7 @@ try {
     .getByRole("button", { name: "PLAY", exact: true })
     .click({ noWaitAfter: true, timeout: 60000 });
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   console.log("Playing");
   const initialCoins = (await snap()).coins;

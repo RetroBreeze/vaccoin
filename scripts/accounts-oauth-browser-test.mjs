@@ -1,11 +1,18 @@
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mockBackend, enterCasino } from "./mock-backend.mjs";
+const landscape = process.env.VACCOIN_LANDSCAPE === "1";
 const origin = process.env.ACCOUNTS_TEST_ORIGIN ?? "http://127.0.0.1:5173";
 const browser = await chromium.launch({
   headless: true,
   args: ["--no-sandbox", "--enable-gpu"],
 });
+async function accountFits(page) {
+  if (!landscape) return;
+  const size = await page.locator('#account-menu').evaluate(root => ({ scroll: root.scrollHeight, height: root.clientHeight, buttons: [...root.querySelectorAll('button')].map(b => { const r = b.getBoundingClientRect(); return {id:b.id,x:r.x,y:r.y,w:r.width,h:r.height}; }).filter(b=>b.w && b.h) }));
+  assert(size.scroll <= size.height + 1, 'OAuth account screen fits Pixel 9 landscape');
+  for (const b of size.buttons) assert(b.x >= 0 && b.y >= 0 && b.x+b.w <= 757 && b.y+b.h <= 309, `${b.id} remains on screen`);
+}
 const guestId = "11111111-1111-4111-8111-111111111111",
   targetId = "22222222-2222-4222-8222-222222222222";
 const progress = (wallet, owned = ["default"], equipped = "default") => ({
@@ -42,9 +49,9 @@ try {
     ["cancelAuth", 1280],
   ]) {
     const page = await browser.newPage({
-        viewport: { width, height: width === 390 ? 844 : 720 },
-        isMobile: width === 390,
-        hasTouch: width === 390,
+        viewport: landscape ? { width: 756, height: 308 } : { width, height: width === 390 ? 844 : 720 },
+        isMobile: landscape || width === 390,
+        hasTouch: landscape || width === 390,
       }),
       errors = [];
     page.setDefaultTimeout(15000);
@@ -264,6 +271,7 @@ try {
           .getByRole("button", { name: "KEEP GOOGLE PROGRESS", exact: true })
           .waitFor({ state: "visible" });
       }
+      await accountFits(page);
       await page.screenshot({
         path: `test-results/accounts-conflict-${strategy}.png`,
       });
@@ -281,6 +289,8 @@ try {
         })
         .click();
       if (!["cloud", "defer", "googleName"].includes(strategy)) {
+        await page.locator("#account-confirm").waitFor({ state: "visible" });
+        await accountFits(page);
         await page.screenshot({
           path: `test-results/accounts-confirm-${strategy}.png`,
         });
@@ -323,6 +333,7 @@ try {
       await expect(page.locator("#account-email")).toHaveText(
         "player.name+vaccoin@example.com",
       );
+      await accountFits(page);
     }
     assert.deepEqual(errors, []);
     console.log(

@@ -83,15 +83,17 @@ export class WorkshopUI {
       return;
     }
     p.begin();
-    p.text("kicker", "DRESS FOR THE JACKPOT", "eyebrow");
-    p.heading("The workshop");
+    const header = p.group("header", "shop-header");
+    p.heading("Shop", header);
     p.text(
       "wallet",
       `${this.workshop.progress.wallet.toLocaleString("en-US")} COINS`,
       "wallet-badge",
+      header,
     );
-    p.text("description", "Vacuum colours. Same power. More personality.");
-    const stage = p.group("stage", "shop-stage");
+    const body = p.group("body", "shop-body");
+    const display = p.group("display", "shop-display", body);
+    const stage = p.group("stage", "shop-stage", display);
     const item = COSMETICS[this.selected];
     const owned = this.workshop.progress.owned.includes(item.id);
     const equipped = this.workshop.progress.equipped === item.id;
@@ -118,8 +120,14 @@ export class WorkshopUI {
         preview,
       );
     p.button("next", this.buttons.get("next")!, ">", stage);
-    p.text("index", `${this.selected + 1} / ${COSMETICS.length}`, "eyebrow");
-    p.node("h2", "item", item.name, "shop-item");
+    p.text(
+      "index",
+      `${this.selected + 1} / ${COSMETICS.length}`,
+      "eyebrow",
+      display,
+    );
+    const details = p.group("details", "shop-details", body);
+    p.node("h2", "item", item.name, "shop-item", details);
     p.text(
       "cost",
       equipped
@@ -128,6 +136,7 @@ export class WorkshopUI {
           ? "OWNED"
           : `${item.cost.toLocaleString("en-US")} COINS`,
       "wallet-badge",
+      details,
     );
     const buy = p.button(
       "buy",
@@ -139,20 +148,21 @@ export class WorkshopUI {
           : this.workshop.progress.wallet >= item.cost
             ? "BUY + EQUIP"
             : "NOT ENOUGH COINS",
-      undefined,
+      details,
       true,
     );
     buy.disabled =
       !this.workshop.ready ||
       equipped ||
       (!owned && this.workshop.progress.wallet < item.cost);
-    p.text("status", this.workshop.status, "menu-note");
-    const actions = p.group("actions");
+    p.text("status", this.workshop.status, "menu-note", details);
+    const actions = p.group("actions", "menu-actions", details);
     if (this.workshop.conflict) {
       p.text(
         "conflict",
         "Local copy kept. Export before choosing cloud.",
         "menu-error",
+        display,
       );
       p.button(
         "export",
@@ -168,6 +178,7 @@ export class WorkshopUI {
       );
     } else p.button("sync", this.buttons.get("sync")!, "SYNC NOW", actions);
     p.button("back", this.buttons.get("back")!, "BACK", actions);
+    p.sound(actions);
     p.end();
   }
 }

@@ -16,11 +16,12 @@ try {
   await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.keyboard.press("m");
-  const started = Date.now();
+  let started;
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
+  started = Date.now();
   await page.evaluate(() =>
     document.dispatchEvent(new MouseEvent("mousedown", { button: 0 })),
   );

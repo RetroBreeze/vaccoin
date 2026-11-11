@@ -64,6 +64,14 @@ export class MenuSurface {
   heading(value: string, parent?: HTMLElement) {
     return this.node("h1", "heading", value, "", parent);
   }
+  sound(parent?: HTMLElement) {
+    const sound = document.getElementById("sound") as HTMLButtonElement;
+    this.button("sound", sound, sound.textContent || "Sound on", parent);
+    sound.setAttribute(
+      "aria-label",
+      sound.dataset.muted === "true" ? "Unmute sound" : "Mute sound",
+    );
+  }
   button(
     key: string,
     button: HTMLButtonElement,

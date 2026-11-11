@@ -24,7 +24,7 @@ try {
     await page.getByRole("textbox", { name: "DISPLAY NAME" }).fill("Mara");
     await page.getByRole("button", { name: "PLAY", exact: true }).click();
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().phase === "playing",
+      () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
     );
     await page.waitForFunction(() =>
       window.vaccoinQA.snapshot().online.startsWith("GLOBAL"),
@@ -59,7 +59,7 @@ try {
     await page.waitForTimeout(1300);
     await page.getByRole("button", { name: "PLAY AGAIN", exact: true }).click();
     await page.waitForFunction(
-      () => window.vaccoinQA.snapshot().phase === "playing",
+      () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
     );
     assert.equal(
       (await page.evaluate(() => window.vaccoinQA.snapshot())).score,

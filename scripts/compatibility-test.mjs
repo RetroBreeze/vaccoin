@@ -42,7 +42,7 @@ try {
   await page.keyboard.press("m");
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal(await page.evaluate(() => window.qaMaster.gain.value), 0);
   await page.evaluate(() =>
@@ -53,7 +53,7 @@ try {
   await page.evaluate(() => document.exitPointerLock());
   await page.waitForTimeout(1300);
   await page.keyboard.press("r");
-  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked);
+  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked && window.vaccoinQA.snapshot().countdown === 0);
   const restarted = await page.evaluate(() => window.vaccoinQA.snapshot());
   assert.equal(restarted.score, 0);
   assert(restarted.remaining > 59);

@@ -1,4 +1,5 @@
 import type { UIState } from "./ui";
+import { CoinRain } from "./coin-rain";
 import { MenuSurface, updateStandings } from "./menu-surface";
 
 export class MenuUI {
@@ -9,6 +10,7 @@ export class MenuUI {
   private pause = new MenuSurface("pause-menu", "pause-screen");
   private toast = document.createElement("aside");
   private lastView = "";
+  private rain = new CoinRain(this.home.root);
   private get(id: string) {
     return document.getElementById(id) as HTMLButtonElement;
   }
@@ -20,16 +22,9 @@ export class MenuUI {
     this.home.begin();
     const grid = this.home.group("grid", "lobby-grid");
     const intro = this.home.group("intro", "lobby-intro", grid);
-    this.home.text("eyebrow", "WELCOME TO THE GRAND CASINO", "eyebrow", intro);
     const logo = this.home.node("img", "logo", "", "lobby-logo", intro);
     logo.src = `${import.meta.env.BASE_URL}assets/logo.png`;
     logo.alt = "Vaccoin";
-    this.home.text(
-      "tagline",
-      "One minute. All the gold you can carry.",
-      "lobby-tagline",
-      intro,
-    );
     const names = this.home.group("names", "player-card", intro);
     for (const id of ["player-name", "saved-player-name"])
       names.append(document.getElementById(id)!);
@@ -98,12 +93,16 @@ export class MenuUI {
     sound.style.display = s.phase === "playing" ? "none" : "";
     sound.textContent = s.muted ? "Sound off" : "Sound on";
     sound.setAttribute("aria-label", s.muted ? "Unmute sound" : "Mute sound");
+    sound.dataset.muted = String(s.muted);
+    if (s.menuCovered) {
+      this.hide();
+      return;
+    }
     if (s.phase === "playing") {
       if (s.locked) return;
       const p = this.pause;
       p.begin();
-      p.text("kicker", "TAKE A BREATHER", "eyebrow");
-      p.heading("On the house.");
+      p.heading("Paused");
       p.text("hint", s.controlHint ?? "", "menu-note");
       p.button("play", this.get("play"), "RESUME", undefined, true);
       p.end();
@@ -119,17 +118,10 @@ export class MenuUI {
     p.begin();
     const grid = p.group("grid", "lobby-grid");
     const intro = p.group("intro", "lobby-intro", grid);
-    p.text("eyebrow", "WELCOME TO THE GRAND CASINO", "eyebrow", intro);
     p.node("img", "logo", "", "lobby-logo", intro);
-    p.text(
-      "tagline",
-      "One minute. All the gold you can carry.",
-      "lobby-tagline",
-      intro,
-    );
     p.group("names", "player-card", intro);
-    p.button("play", this.get("play"), "PLAY", intro, true);
     const actions = p.group("actions", "menu-actions", intro);
+    p.button("play", this.get("play"), "PLAY", actions, true);
     p.button(
       "open-board",
       this.get("leaderboard-open"),
@@ -144,61 +136,58 @@ export class MenuUI {
     );
     p.button("shop", this.get("workshop-open"), "SHOP", actions);
     p.button("account", this.get("account-open"), "ACCOUNT", actions);
-    p.text(
-      "controls",
-      "60 seconds · Collect coins · Make a glorious mess",
-      "menu-note",
-      intro,
-    );
+    p.sound(actions);
     const board = p.group("board", "casino-panel lobby-board", grid);
-    p.text("board-kicker", "THE HOUSE RECORDS", "eyebrow", board);
-    p.node("h2", "board-heading", "High rollers", "", board);
-    p.text("live", s.liveStatus ?? "CONNECTING", "live-status", board);
+    p.node("h2", "board-heading", "Top 10", "", board);
+    if (s.liveStatus !== "CONNECTED")
+      p.text("live", s.liveStatus ?? "CONNECTING", "live-status", board);
     const rows = p.node("ol", "rows", "", "standings", board);
     updateStandings(
       rows,
       (s.liveEntries ?? []).slice(0, 10),
-      s.liveStatus === "CONNECTED"
-        ? "No scores yet. Set the house record."
-        : "Waiting for the house records…",
+      s.liveStatus === "CONNECTED" ? "No scores yet." : "Loading rankings…",
     );
     if (s.rankNotice) p.text("notice", s.rankNotice, "rank-notice", intro);
     if (s.error) p.text("error", s.error, "menu-error", intro);
     p.end();
+    this.rain.draw(s.time);
   }
   private drawResults(s: UIState) {
     const p = this.results;
     p.begin();
-    p.text("kicker", "THE COUNT IS IN", "eyebrow");
-    p.heading("What a haul.");
-    p.text("score", s.score.toLocaleString("en-US"), "result-score");
+    const summary = p.group("summary", "result-summary");
+    p.heading("Results", summary);
+    p.text("score", s.score.toLocaleString("en-US"), "result-score", summary);
     p.text(
       "stats",
-      `BEST ${(s.personalBest ?? s.best).toLocaleString("en-US")}${s.rank == null ? "" : `  /  RANK ${s.rank}`}`,
+      `BEST ${(s.personalBest ?? s.best).toLocaleString("en-US")}${s.rank == null ? "" : ` / RANK ${s.rank}`}`,
       "result-stats",
+      summary,
     );
-    const actions = p.group("actions");
+    const actions = p.group("actions", "menu-actions", summary);
     p.button("play", this.get("play"), "PLAY AGAIN", actions, true);
     p.button("menu", this.get("main-menu"), "MAIN MENU", actions);
     p.button("shop", this.get("workshop-open"), "SHOP", actions);
-    p.node("h2", "top", "Top 10");
-    const rows = p.node("ol", "rows", "", "standings");
+    p.sound(actions);
+    const board = p.group("board", "result-board");
+    p.node("h2", "top", "Top 10", "", board);
+    const rows = p.node("ol", "rows", "", "standings", board);
     updateStandings(
       rows,
       s.entries.slice(0, 10),
       s.loading ? "Loading leaderboard…" : s.leaderboardReadStatus,
     );
     if (s.canRetry && !s.loading)
-      p.button("retry", this.get("retry-leaderboard"), s.retryLabel);
+      p.button("retry", this.get("retry-leaderboard"), s.retryLabel, board);
     if (s.error) p.text("error", s.error, "menu-error");
     p.end();
   }
   private drawBoard(s: UIState) {
     const p = this.board;
     p.begin();
-    p.text("kicker", "THE HOUSE RECORDS", "eyebrow");
-    p.heading("Leaderboard");
-    const tabs = p.group("tabs");
+    const header = p.group("header", "rankings-header");
+    p.heading("Leaderboard", header);
+    const tabs = p.group("tabs", "menu-actions", header);
     p.button("top", this.get("leaderboard-top"), "TOP 10", tabs).setAttribute(
       "aria-pressed",
       String(s.browseMode !== "around"),
@@ -217,7 +206,6 @@ export class MenuUI {
         ? "Loading leaderboard…"
         : (s.browseStatus ?? "No scores yet."),
     );
-    p.text("status", s.browseStatus ?? "");
     const actions = p.group("actions");
     if (s.browseCanRetry && !s.browseLoading)
       p.button(
@@ -227,12 +215,12 @@ export class MenuUI {
         actions,
       );
     p.button("back", this.get("leaderboard-back"), "BACK", actions);
+    p.sound(actions);
     p.end();
   }
   private drawAchievements(s: UIState) {
     const p = this.achievements;
     p.begin();
-    p.text("kicker", "A LITTLE SOMETHING TO SHOW FOR IT", "eyebrow");
     p.heading("Achievements");
     const list = p.group("list", "achievement-list");
     for (const a of s.achievements ?? []) {
@@ -250,8 +238,11 @@ export class MenuUI {
         row,
       );
     }
-    p.text("status", s.achievementStatus ?? "");
-    p.button("back", this.get("achievements-open"), "BACK");
+    if (s.achievementStatus && s.achievementStatus !== "CONNECTED")
+      p.text("status", s.achievementStatus, "achievement-status");
+    const actions = p.group("actions");
+    p.button("back", this.get("achievements-open"), "BACK", actions);
+    p.sound(actions);
     p.end();
   }
   hide() {

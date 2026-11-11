@@ -395,7 +395,7 @@ async function boot() {
     view.camera.getWorldDirection(direction);
   }
   function startRound() {
-    round.start(performance.now());
+    round.start(performance.now(), 3);
     runOwner = workshop.owner;
     runSaveGeneration = workshop.generation;
     player.reset();
@@ -446,12 +446,17 @@ async function boot() {
     nameInput.blur();
     controlMode = source;
     if (source !== "mouse") {
+      requesting = true;
       intent.cancel();
+      void audio.unlock();
+      // Fullscreen and orientation changes can blur the page. Establish the
+      // round and controls only after those display transitions have settled.
+      if (source === "touch") await immersive.enter();
+      requesting = false;
+      if (document.hidden) return;
       if (restart || round.phase !== "playing") startRound();
       portableActive = true;
       error = "";
-      void audio.unlock();
-      if (source === "touch") void immersive.enter();
       return;
     }
     requesting = true;
@@ -494,7 +499,7 @@ async function boot() {
     error = "MOUSE CAPTURE BLOCKED / CLICK PLAY TO RETRY";
   });
   document.addEventListener("mousemove", (e) => {
-    if (locked && round.phase === "playing") {
+    if (locked && round.phase === "playing" && round.countdown(performance.now()) === 0) {
       // Browsers may report the cursor recentering as the first locked delta.
       if (ignoreNextLook) {
         ignoreNextLook = false;
@@ -640,10 +645,11 @@ async function boot() {
     }
     rotatePrompt.hidden = !portrait() || round.phase !== "playing" || accounts.open;
     if (portrait() && (portableActive || locked)) pauseControls();
-    const active = round.phase === "playing" && controlsActive();
-    audio.updateMusic(active);
-    pauseButton.hidden = round.phase !== "playing" || !active;
-    touch.show(active && mobile);
+    const captured = round.phase === "playing" && controlsActive();
+    const active = captured && round.countdown(now) === 0;
+    audio.updateMusic(captured);
+    pauseButton.hidden = round.phase !== "playing" || !captured;
+    touch.show(captured && mobile);
     if (active) {
       const [dx, dy] = touch.input.consumeLook();
       player.look(
@@ -652,6 +658,9 @@ async function boot() {
       );
       if (touch.input.consumeJump() || (!menuAction && pad.jump))
         keys.add("Space");
+    } else {
+      touch.input.consumeLook();
+      touch.input.consumeJump();
     }
     vacuumHeld = active && (mouseDown || touch.input.vacuum || pad.vacuum);
     gainedFrame = 0;
@@ -661,7 +670,7 @@ async function boot() {
         simulate(1 / 120);
         accumulator -= 1 / 120;
       }
-      round.collect(gainedFrame);
+      round.collect(gainedFrame, now);
       rate +=
         (gainedFrame / Math.max(elapsed, 0.001) - rate) *
         (1 - Math.exp(-5 * elapsed));
@@ -722,6 +731,7 @@ async function boot() {
     uiState.zone = casinoZone(player.position.x,player.position.y,player.position.z);
     uiState.pickup = coins.pickupTime > 0 ? coins.pickup : "";
     uiState.remaining = round.phase === "playing" ? round.remaining(now) : 60;
+    uiState.countdown = round.countdown(now);
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
     uiState.locked = controlsActive();
@@ -731,7 +741,7 @@ async function boot() {
         ? "STICKS MOVE + LOOK / A JUMP / RT VAC / START PAUSE"
         : "WASD MOVE / MOUSE LOOK / CLICK VAC / SPACE JUMP / F FULLSCREEN";
     uiState.time =
-      round.phase === "playing" ? (now - round.startedAt) / 1000 : now / 1000;
+      round.phase === "playing" ? Math.max(0, (now - round.startedAt) / 1000) : now / 1000;
     uiState.muted = audio.muted;
     uiState.entries = leaderboard.entries;
     uiState.error = error;
@@ -749,6 +759,7 @@ async function boot() {
     spectacle.update(now / 1000);
     // Native menus are opaque; reserve arena rendering for active gameplay.
     if (entered() && round.phase === "playing" && controlsActive() && !workshopUI.open && !accounts.open) view.draw();
+    uiState.menuCovered = workshopUI.open || accounts.open;
     ui.draw(uiState, elapsed);
     if (workshopUI.open || accounts.open) ui.menus?.hide();
     workshopUI.draw(titleVisible, round.phase === 'results' && !accounts.open);
@@ -777,6 +788,7 @@ async function boot() {
           phase: round.phase,
           score: round.score,
           remaining: round.remaining(performance.now()),
+          countdown: round.countdown(performance.now()),
           best: leaderboard.best,
           coins: coins.count,
           alive: coins.countAlive(),

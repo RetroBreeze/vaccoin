@@ -18,7 +18,7 @@ try {
   await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
-  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked);
+  await page.waitForFunction(() => window.vaccoinQA.snapshot().locked && window.vaccoinQA.snapshot().countdown === 0);
   const results = [];
   for (const [x, y, z, targetY] of [
     [-14, 0, 16.5, 6],

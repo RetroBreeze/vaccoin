@@ -40,7 +40,7 @@ try {
   await mobile.screenshot({ path: "test-results/touch-title.png" });
   await mobile.getByRole("button", { name: "PLAY", exact: true }).tap();
   await mobile.waitForFunction(
-    () => window.vaccoinQA.snapshot().controlsActive,
+    () => window.vaccoinQA.snapshot().controlsActive && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal((await snapshot(mobile)).locked, false);
   assert.equal((await snapshot(mobile)).controlMode, "touch");
@@ -118,7 +118,7 @@ try {
   );
   await mobile.getByRole("button", { name: "RESUME", exact: true }).tap();
   await mobile.waitForFunction(
-    () => window.vaccoinQA.snapshot().controlsActive,
+    () => window.vaccoinQA.snapshot().controlsActive && window.vaccoinQA.snapshot().countdown === 0,
   );
   await mobile.setViewportSize({ width: 390, height: 844 });
   await mobile.locator("#rotate-device").waitFor({ state: "visible" });
@@ -130,7 +130,7 @@ try {
   await mobile.locator("#rotate-device").waitFor({ state: "hidden" });
   await mobile.getByRole("button", { name: "RESUME", exact: true }).tap();
   await mobile.waitForFunction(
-    () => window.vaccoinQA.snapshot().controlsActive,
+    () => window.vaccoinQA.snapshot().controlsActive && window.vaccoinQA.snapshot().countdown === 0,
   );
   await mobile.evaluate(() => window.dispatchEvent(new Event("blur")));
   await mobile.waitForFunction(
@@ -143,7 +143,7 @@ try {
   assert.equal(await mobile.locator("#touch-controls").isVisible(), false);
   await mobile.getByRole("button", { name: "PLAY AGAIN", exact: true }).tap();
   await mobile.waitForFunction(
-    () => window.vaccoinQA.snapshot().controlsActive,
+    () => window.vaccoinQA.snapshot().controlsActive && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal((await snapshot(mobile)).score, 0);
   assert.equal((await snapshot(mobile)).locked, false);
@@ -177,7 +177,7 @@ try {
     );
   await button(9, true);
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   await button(9, false);
   assert.equal((await snapshot(page)).locked, false);
@@ -241,7 +241,7 @@ try {
   );
   await button(0, true);
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal((await snapshot(page)).controlMode, "gamepad");
   assert.equal((await snapshot(page)).score, 0);

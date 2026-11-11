@@ -33,7 +33,7 @@ try {
   await page.screenshot({ path: "test-results/title.png" });
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal((await snapshot()).locked, true);
   console.log("Started", await snapshot());
@@ -122,7 +122,7 @@ try {
   await page.waitForTimeout(1300);
   await page.getByRole("button", { name: "PLAY AGAIN", exact: true }).click();
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   const reset = await snapshot();
   assert.equal(reset.score, 0);
@@ -146,7 +146,7 @@ try {
   await nameInput.fill("New Player");
   await nameInput.press("Enter");
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   assert.equal(await page.locator("#player-name").isVisible(), false);
   assert.deepEqual(errors, []);

@@ -30,7 +30,7 @@ try {
     .getByRole("button", { name: "PLAY", exact: true })
     .click({ noWaitAfter: true, timeout: 60000 });
   await page.waitForFunction(
-    () => window.vaccoinQA.snapshot().phase === "playing",
+    () => window.vaccoinQA.snapshot().phase === "playing" && window.vaccoinQA.snapshot().countdown === 0,
   );
   for (const [name, position] of [
     ["entrance", [0, 0, 35, 0, -0.08]],

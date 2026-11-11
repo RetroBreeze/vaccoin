@@ -743,7 +743,8 @@ async function boot() {
     updateCasinoVisibility(view.scene,view.camera.position.y);
     atmosphere.update(now / 1000, destructibles.objects);
     spectacle.update(now / 1000);
-    view.draw();
+    // The Shop is opaque; avoid rendering the casino behind its 3D preview.
+    if (!workshopUI.open) view.draw();
     ui.draw(uiState, elapsed);
     ui.drawAchievements(uiState, achievementsButton);
     if (workshopUI.open) {

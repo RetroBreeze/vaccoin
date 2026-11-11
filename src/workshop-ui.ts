@@ -1,3 +1,4 @@
+import { VacuumPreview } from "./vacuum-preview";
 import { pixelText } from "./pixel-font";
 import { COSMETICS } from "./workshop-state";
 import type { Workshop } from "./workshop";
@@ -7,6 +8,7 @@ import { titleLayout } from "./title-screen";
 export class WorkshopUI {
   open = false;
   selected = 0;
+  private preview = new VacuumPreview();
   private buttons = new Map<string, HTMLButtonElement>();
   constructor(
     private ui: UI,
@@ -53,7 +55,7 @@ export class WorkshopUI {
         );
         const a = document.createElement("a");
         a.href = url;
-        a.download = "vaccoin-workshop-recovery.json";
+        a.download = "vaccoin-shop-recovery.json";
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
@@ -119,12 +121,12 @@ export class WorkshopUI {
     };
     if (!this.open) {
       if (results) {
-        button("open", "VACUUM WORKSHOP", cx - 128, 480, 256, 30);
+        button("open", "SHOP", cx - 128, 480, 256, 30);
         text(this.workshop.status, cx, 519, 1, "#96b6c2", "center");
       }
       if (visible) {
         const g = titleLayout(w);
-        button("open", "VACUUM WORKSHOP", g.left - 128, g.menuY + 98, 256, 32);
+        button("open", "SHOP", g.left - 128, g.menuY + 98, 256, 32);
         text(
           this.workshop.status,
           g.left,
@@ -138,7 +140,7 @@ export class WorkshopUI {
     }
     rect(0, 0, w, 540, "#0b2030");
     for (let y = 0; y < 540; y += 16) rect(0, y, w, 1, "#102a3a");
-    text("VACUUM WORKSHOP", cx, 24, 3, "#ffcf58", "center");
+    text("SHOP", cx, 24, 3, "#ffcf58", "center");
     text(
       `${this.workshop.progress.wallet.toLocaleString("en-US")} COINS`,
       cx,
@@ -148,31 +150,42 @@ export class WorkshopUI {
       "center",
     );
     text(
-      "COSMETIC DESIGNS / SAME POWER. SAME GAME.",
+      "VACUUM COLOURS / SAME POWER. SAME GAME.",
       cx,
       96,
       1,
       "#96b6c2",
       "center",
     );
-    const item = COSMETICS[this.selected],
-      hex = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+    const item = COSMETICS[this.selected];
     const owned = this.workshop.progress.owned.includes(item.id),
       equipped = this.workshop.progress.equipped === item.id;
     rect(cx - 155, 121, 310, 154, "#173849");
     rect(cx - 155, 271, 310, 4, "#295367");
-    // Pixel preview shares the actual viewmodel palette and low-poly silhouette.
-    rect(cx - 85, 231, 180, 16, "#0a202e");
-    rect(cx - 39, 160, 112, 65, hex(item.dark));
-    rect(cx - 45, 151, 112, 65, hex(item.body));
-    rect(cx - 45, 144, 112, 14, hex(item.trim));
-    rect(cx + 58, 176, 20, 43, hex(item.accent));
-    rect(cx - 12, 130, 18, 14, hex(item.accent));
-    rect(cx - 100, 167, 65, 44, hex(item.dark));
-    rect(cx - 110, 162, 18, 54, hex(item.trim));
-    rect(cx - 105, 174, 8, 30, hex(item.dark));
-    for (let i = 0; i < 3; i++)
-      rect(cx - 25 + i * 22, 168, 7, 29, hex(item.trim));
+    // The pixel UI stretches on narrow portrait screens; keep the 3D object proportional.
+    const previewHeight =
+      130 * Math.min(1, innerWidth / w / (innerHeight / 540));
+    if (
+      !this.preview.draw(
+        c,
+        item,
+        cx - 155,
+        121 + (130 - previewHeight) / 2,
+        310,
+        previewHeight,
+      )
+    ) {
+      text(
+        this.preview.state === "error"
+          ? "3D PREVIEW UNAVAILABLE"
+          : "LOADING 3D PREVIEW",
+        cx,
+        185,
+        1,
+        "#96b6c2",
+        "center",
+      );
+    }
     text(
       `${this.selected + 1} / ${COSMETICS.length}`,
       cx,
@@ -201,7 +214,7 @@ export class WorkshopUI {
       equipped
         ? "EQUIPPED"
         : owned
-          ? "EQUIP DESIGN"
+          ? "EQUIP COLOUR"
           : this.workshop.progress.wallet >= item.cost
             ? "BUY + EQUIP"
             : "NOT ENOUGH COINS",

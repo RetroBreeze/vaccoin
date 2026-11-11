@@ -86,6 +86,7 @@ describe("cosmetic progression", () => {
         "accent",
         "body",
         "cost",
+        "coupler",
         "dark",
         "id",
         "name",

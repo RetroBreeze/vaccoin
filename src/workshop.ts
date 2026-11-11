@@ -74,7 +74,7 @@ async function timed<T>(promise: Promise<T>): Promise<T> {
 export class Workshop {
   generation = "legacy";
   progress = emptyProgress();
-  status = "RESTORING WORKSHOP";
+  status = "RESTORING SHOP";
   ready = false;
   owner: string | null = null;
   conflict: Saved<Progress> | null = null;
@@ -130,7 +130,7 @@ export class Workshop {
         : error instanceof GameServicesError && error.kind === "authentication"
           ? "SIGN IN TO SYNC / LOCAL SAVE SAFE"
           : error instanceof Error && error.message === "NOT ENOUGH COINS"
-            ? "SAVE CONFLICT / REVIEW WORKSHOP"
+            ? "SAVE CONFLICT / REVIEW SHOP"
             : error instanceof ApiError
               ? `SYNC PAUSED / ${error.code}`
               : error instanceof Error
@@ -163,7 +163,7 @@ export class Workshop {
   private async record(op: WorkshopOperation, sync = true) {
     await this.localReady;
     if (!this.ready || !(await this.same()))
-      throw new Error("WORKSHOP NOT READY");
+      throw new Error("SHOP NOT READY");
     const state = await this.options.store.update(this.key, (previous) => {
       const s = previous ?? blank();
       if (s.deletion || s.resetBlocked)
@@ -234,7 +234,7 @@ export class Workshop {
     if (this.accountPaused || !this.owner) return;
     if (this.running) return this.running;
     if (!this.options.saves || this.owner === "local-guest") {
-      if (this.ready) this.status = "LOCAL WORKSHOP / NO CLOUD SESSION";
+      if (this.ready) this.status = "LOCAL SHOP / NO CLOUD SESSION";
       return;
     }
     const saves = this.options.saves;
@@ -249,7 +249,7 @@ export class Workshop {
             try {
               remote = await timed(saves.load<Progress>(WORKSHOP_SLOT));
               if (remote.schemaVersion !== 1)
-                throw new Error("WORKSHOP UPDATE REQUIRED");
+                throw new Error("SHOP UPDATE REQUIRED");
               remote.data = validateProgress(remote.data);
               if (
                 (remote.metadata?.resetToken ?? undefined) !== state.resetToken
@@ -649,7 +649,7 @@ export class Workshop {
   async prepareAccountSnapshot(): Promise<TransferSave> {
     await this.pauseForAccount();
     await this.localReady;
-    if (!this.ready || !await this.same()) throw new Error('RESTORE WORKSHOP BEFORE SIGN IN');
+    if (!this.ready || !await this.same()) throw new Error('RESTORE SHOP BEFORE SIGN IN');
     await this.recoverRuns();
     const state = await this.current();
     return {slot: WORKSHOP_SLOT, kind: 'json', data: validateProgress(state.snapshot), schemaVersion: 1, metadata: {game:'vaccoin',profile:'cosmetic-workshop'}};

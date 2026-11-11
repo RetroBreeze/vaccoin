@@ -163,10 +163,12 @@ try {
   await page.route("**/assets/vacuum/vaccoin-vacuum.glb", (route) =>
     route.abort(),
   );
+  await page.reload();
   await page.evaluate(async () => {
-    const { Vacuum } = await import("/src/vacuum.ts?failure-check");
-    const q = window.assetQA;
-    const v = new Vacuum(q.c);
+    const { Vacuum } = await import("/src/vacuum.ts");
+    const { PerspectiveCamera } =
+      await import("/node_modules/three/build/three.module.js");
+    const v = new Vacuum(new PerspectiveCamera());
     await v.load();
     if (v.loadState !== "error" || !v.group.children.length)
       throw Error("Missing loading fallback");

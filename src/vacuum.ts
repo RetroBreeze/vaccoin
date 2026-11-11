@@ -1,16 +1,11 @@
 import { COSMETICS } from "./workshop-state";
 import * as T from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import {
+  createVacuumMaterials,
+  applyVacuumColour,
+  loadVacuumModel,
+} from "./vacuum-model";
 import { lineBlocked } from "./terrain";
-
-let asset: Promise<T.Group> | undefined;
-const palette: Record<string, number> = {
-  body: 0x83709e,
-  trim: 0xd0b7e5,
-  dark: 0x332b49,
-  accent: 0xffd329,
-  coupler: 0x04d4cf,
-};
 
 export class Vacuum {
   readonly group = new T.Group();
@@ -18,7 +13,7 @@ export class Vacuum {
   readonly nozzleTarget = new T.Vector3();
   private visual = new T.Group();
   private power = 0;
-  private materials = new Map<string, T.MeshLambertMaterial>();
+  private materials = createVacuumMaterials();
   private eye = new T.Vector3();
   private physicalPose = new T.Object3D();
   private previousRotation = new T.Quaternion();
@@ -33,12 +28,6 @@ export class Vacuum {
   loadState: "fallback" | "loaded" | "error" = "fallback";
 
   constructor(private camera: T.Camera) {
-    for (const [name, color] of Object.entries(palette)) {
-      this.materials.set(
-        name,
-        new T.MeshLambertMaterial({ color, flatShading: true }),
-      );
-    }
     // Small, deliberately logo-shaped stand-in while loading (also works offline).
     const head = new T.Mesh(
       new T.CylinderGeometry(0.48, 0.19, 0.6, 4, 1, true),
@@ -82,19 +71,7 @@ export class Vacuum {
   load(): Promise<void> {
     return (this.loading ??= (async () => {
       try {
-        asset ??= new GLTFLoader()
-          .loadAsync(
-            `${import.meta.env.BASE_URL}assets/vacuum/vaccoin-vacuum.glb`,
-          )
-          .then((g) => g.scene);
-        const model = (await asset).clone(true);
-        model.traverse((o) => {
-          if (o instanceof T.Mesh) {
-            const name = (o.material as T.Material).name;
-            o.material =
-              this.materials.get(name) ?? this.materials.get("body")!;
-          }
-        });
+        const model = await loadVacuumModel(this.materials);
         for (const o of this.visual.children)
           if (o instanceof T.Mesh) o.geometry.dispose();
         this.visual.clear();
@@ -115,15 +92,7 @@ export class Vacuum {
     const item = COSMETICS.find((c) => c.id === id);
     if (!item) return;
     this.cosmetic = id;
-    for (const [name, material] of this.materials) {
-      const color =
-        id === "default"
-          ? palette[name]
-          : name === "coupler"
-            ? item.body
-            : item[name as "body" | "trim" | "dark" | "accent"];
-      material.color.setHex(color);
-    }
+    applyVacuumColour(this.materials, item);
   }
   update(
     dt: number,

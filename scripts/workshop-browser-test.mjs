@@ -30,7 +30,7 @@ try {
       () => window.vaccoinQA?.snapshot().workshop.ready,
     );
     await page
-      .getByRole("button", { name: "VACUUM WORKSHOP", exact: true })
+      .getByRole("button", { name: "SHOP", exact: true })
       .click();
     await page.waitForFunction(() => window.vaccoinQA.snapshot().workshop.open);
     await page.screenshot({ path: `test-results/workshop-empty-${label}.png` });
@@ -59,7 +59,7 @@ try {
     );
     assert.equal(calls.submissions.length, 1);
     await page
-      .getByRole("button", { name: "VACUUM WORKSHOP", exact: true })
+      .getByRole("button", { name: "SHOP", exact: true })
       .click();
     await page.getByRole("button", { name: ">", exact: true }).click();
     await page
@@ -86,7 +86,7 @@ try {
     );
     calls.saveOffline = true;
     await page
-      .getByRole("button", { name: "VACUUM WORKSHOP", exact: true })
+      .getByRole("button", { name: "SHOP", exact: true })
       .click();
     await page.getByRole("button", { name: ">", exact: true }).click();
     await page

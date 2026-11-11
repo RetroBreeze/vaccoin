@@ -2,11 +2,12 @@
   "formatVersion": 1,
   "projectRef": "ttwppnsnxcighfcesxhf",
   "modules": {
-    "core": "0.1.3",
-    "leaderboards": "0.1.3",
-    "live-leaderboards": "0.1.3",
-    "achievements": "0.1.3",
-    "cloud-saves": "0.1.3"
+    "core": "0.1.4",
+    "leaderboards": "0.1.4",
+    "live-leaderboards": "0.1.4",
+    "achievements": "0.1.4",
+    "cloud-saves": "0.1.4",
+    "admin": "0.1.4"
   },
   "leaderboards": [
     {

@@ -6,16 +6,18 @@ export interface Cosmetic {
   trim: number;
   dark: number;
   accent: number;
+  coupler: number;
 }
 export const COSMETICS: readonly Cosmetic[] = [
   {
     id: "default",
     name: "DEFAULT",
     cost: 0,
-    body: 0x5fe0bd,
-    trim: 0xffe2ad,
-    dark: 0x1b3544,
-    accent: 0xf3a65a,
+    body: 0x83709e,
+    trim: 0xd0b7e5,
+    dark: 0x332b49,
+    accent: 0xffd329,
+    coupler: 0x04d4cf,
   },
   {
     id: "brick-red",
@@ -25,6 +27,7 @@ export const COSMETICS: readonly Cosmetic[] = [
     trim: 0xffd1a1,
     dark: 0x342c35,
     accent: 0xe9915d,
+    coupler: 0xb64b42,
   },
   {
     id: "chrome",
@@ -34,6 +37,7 @@ export const COSMETICS: readonly Cosmetic[] = [
     trim: 0xf3f8eb,
     dark: 0x4a606f,
     accent: 0x6b99ae,
+    coupler: 0xb5ccd4,
   },
   {
     id: "hazard",
@@ -43,6 +47,7 @@ export const COSMETICS: readonly Cosmetic[] = [
     trim: 0x222c33,
     dark: 0x151d24,
     accent: 0xf6e7a8,
+    coupler: 0xe5b83b,
   },
   {
     id: "neon",
@@ -52,6 +57,7 @@ export const COSMETICS: readonly Cosmetic[] = [
     trim: 0x6cffe1,
     dark: 0x282543,
     accent: 0xf67fcb,
+    coupler: 0x8b4ebe,
   },
   {
     id: "gold",
@@ -61,6 +67,7 @@ export const COSMETICS: readonly Cosmetic[] = [
     trim: 0xffeb99,
     dark: 0x6a4930,
     accent: 0xf8cf56,
+    coupler: 0xdca838,
   },
 ];
 export interface Progress {
@@ -91,7 +98,7 @@ export function emptyProgress(): Progress {
 }
 export function validateProgress(data: unknown): Progress {
   if (!data || typeof data !== "object" || Array.isArray(data))
-    throw new Error("INVALID WORKSHOP SAVE");
+    throw new Error("INVALID SHOP SAVE");
   const s = data as Progress;
   if (
     s.schemaVersion !== 1 ||
@@ -110,7 +117,7 @@ export function validateProgress(data: unknown): Progress {
     Array.isArray(s.applied) ||
     Object.values(s.applied).some((v) => typeof v !== "string")
   )
-    throw new Error("INVALID WORKSHOP SAVE");
+    throw new Error("INVALID SHOP SAVE");
   return structuredClone(s);
 }
 export function applyOperation(

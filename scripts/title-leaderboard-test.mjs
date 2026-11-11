@@ -1,7 +1,7 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 
 const origin = process.argv[2] || "http://localhost:5173";
 await mkdir("test-results", { recursive: true });
@@ -17,6 +17,7 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`${origin}/?qa`);
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.waitForFunction(
     () => window.vaccoinQA.snapshot().live.status === "CONNECTED",
@@ -59,7 +60,7 @@ try {
     "browsing creates no additional sessions",
   );
   await page.getByRole("button", { name: "BACK", exact: true }).click();
-  assert.equal(await page.locator("#player-name").isVisible(), true);
+  await page.locator("#player-name").waitFor({ state: "visible" });
   assert.equal(
     (await page.evaluate(() => window.vaccoinQA.snapshot())).phase,
     "title",
@@ -71,9 +72,12 @@ try {
   );
   await page.keyboard.press("Escape");
 
-  await page.evaluate(() =>
-    localStorage.setItem("vaccoin.display-name.v1", "Mara"),
-  );
+  await page.evaluate(() => {
+    const identity = Object.keys(localStorage).find(key => key.startsWith('vaccoin.workshop.identity:'));
+    const namespace = identity.slice('vaccoin.workshop.identity:'.length);
+    const player = localStorage.getItem(identity);
+    localStorage.setItem(`vaccoin.display-name.v1:${namespace}:${player}`, 'Mara');
+  });
   const playerId = "11111111-1111-4111-8111-111111111111";
   const entries = Array.from({ length: 125 }, (_, i) => ({
     playerId:
@@ -100,6 +104,7 @@ try {
     });
   });
   await page.reload();
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("button", { name: "LEADERBOARD", exact: true }).click();
   await page.getByRole("button", { name: "AROUND YOU", exact: true }).click();

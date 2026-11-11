@@ -86,11 +86,12 @@ try {
       receipts.set(body.operationId, next);
       return reply({ save: next });
     });
-    await page.route(`${origin}/delete-harness`, route => route.fulfill({contentType:'text/html', body:`<html><head><link rel="stylesheet" href="/src/style.css"></head><body><canvas width="960" height="540" style="width:100vw;height:100vh"></canvas><script type="module">
+    await page.route(`${origin}/delete-harness`, route => route.fulfill({contentType:'text/html', body:`<html><head><link rel="stylesheet" href="/src/style.css"></head><body class="casino-entered"><canvas width="960" height="540" style="width:100vw;height:100vh"></canvas><script type="module">
       import { configuredGameConnection } from '/src/game-services.ts';
       import { Workshop } from '/src/workshop.ts';
       import { Accounts } from '/src/accounts.ts';
       import { AccountUI } from '/src/account-ui.ts';
+      import { MenuSurface } from '/src/menu-surface.ts';
       import { createIndexedDbStore } from '/node_modules/.vite/deps/@supagame_sdk-ts_browser.js';
       const connection = configuredGameConnection();
       await connection.game.players.ensureAnonymousSession();
@@ -99,7 +100,12 @@ try {
       const account = new Accounts(connection.game, workshop, 'test');
       await account.refresh();
       const ui = new AccountUI({ctx:document.querySelector('canvas').getContext('2d'),w:960},account,()=>{});
-      function draw(){ui.draw(true); requestAnimationFrame(draw);} draw();
+      const opener = new MenuSurface('delete-test-lobby');
+      function draw(){
+        if (account.open) opener.hide();
+        else { opener.begin(); opener.button('account', document.querySelector('#account-open'), 'ACCOUNT'); opener.end(); }
+        ui.draw(true); requestAnimationFrame(draw);
+      } draw();
       window.vaccoinQA = {snapshot:()=>({workshop:{progress:workshop.progress,status:workshop.status,ready:workshop.ready}}),workshopSync:()=>workshop.sync()};
     </script></body></html>`}));
     await page.goto(`${origin}/delete-harness`);

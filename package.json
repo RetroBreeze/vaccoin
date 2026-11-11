@@ -9,7 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "test:browser": "node scripts/browser-test.mjs",
-    "test:browser:live": "node scripts/live-browser-test.mjs"
+    "test:browser:live": "node scripts/live-browser-test.mjs",
+    "test:browser:ui": "node scripts/responsive-ui-browser-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

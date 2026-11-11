@@ -1,4 +1,4 @@
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -18,6 +18,7 @@ page.on("console", (m) => {
 const snapshot = () => page.evaluate(() => window.vaccoinQA.snapshot());
 try {
   await page.goto("http://127.0.0.1:5173/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => !!window.vaccoinQA);
   const nameInput = page.getByRole("textbox", { name: "DISPLAY NAME" });
   await nameInput.waitFor({ state: "visible" });
@@ -134,11 +135,13 @@ try {
   await page.waitForTimeout(100);
   await page.screenshot({ path: "test-results/scaling.png" });
   await page.reload();
+  await enterCasino(page);
   await page.waitForFunction(() => !!window.vaccoinQA);
   assert.equal(await page.locator("#player-name").isVisible(), false);
   assert.equal(await page.locator("#display-name").inputValue(), "Mara");
   await page.evaluate(() => localStorage.removeItem("vaccoin.display-name.v1"));
   await page.reload();
+  await enterCasino(page);
   await page.waitForFunction(() => !!window.vaccoinQA);
   await nameInput.fill("New Player");
   await nameInput.press("Enter");

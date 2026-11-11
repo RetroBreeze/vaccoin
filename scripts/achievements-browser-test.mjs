@@ -1,5 +1,5 @@
 import { chromium } from "@playwright/test";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 await mkdir("test-results", { recursive: true });
@@ -17,6 +17,7 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
     const calls = await mockBackend(page, { savedName: true });
     await page.goto("http://127.0.0.1:5173/?qa");
+    await enterCasino(page);
     await page.waitForFunction(
       () => window.vaccoinQA?.snapshot().achievements.rows.length === 6,
     );
@@ -65,6 +66,7 @@ try {
     );
     assert.equal(calls.submissions.length, 1);
     await page.reload();
+    await enterCasino(page);
     await page
       .getByRole("button", { name: "ACHIEVEMENTS", exact: true })
       .click();

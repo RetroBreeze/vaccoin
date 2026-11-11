@@ -1,4 +1,4 @@
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({
@@ -35,6 +35,7 @@ try {
     };
   });
   await page.goto("http://127.0.0.1:5173/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("textbox", { name: "DISPLAY NAME" }).fill("Mara");
   await page.locator("#display-name").evaluate((input) => input.blur());

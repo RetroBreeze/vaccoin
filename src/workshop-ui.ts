@@ -1,20 +1,25 @@
 import { VacuumPreview } from "./vacuum-preview";
-import { pixelText } from "./pixel-font";
+import { MenuSurface } from "./menu-surface";
 import { COSMETICS } from "./workshop-state";
 import type { Workshop } from "./workshop";
 import type { UI } from "./ui";
-import { titleLayout } from "./title-screen";
-/** Canvas pixels with matching native controls for keyboard, touch and screen readers. */
+/** Responsive shop; its 3D preview is an asset inside the native layout. */
 export class WorkshopUI {
   open = false;
   selected = 0;
   private preview = new VacuumPreview();
+  private panel = new MenuSurface("shop-menu");
+  private canvas = document.createElement("canvas");
   private buttons = new Map<string, HTMLButtonElement>();
   constructor(
     private ui: UI,
     private workshop: Workshop,
     private toggle: (open: boolean) => void,
   ) {
+    this.canvas.width = 620;
+    this.canvas.height = 260;
+    this.canvas.className = "shop-preview";
+    this.canvas.setAttribute("aria-label", "Selected vacuum colour preview");
     for (const id of [
       "open",
       "back",
@@ -68,149 +73,65 @@ export class WorkshopUI {
         0,
         COSMETICS.findIndex((c) => c.id === this.workshop.progress.equipped),
       );
-      this.buttons.get("back")!.focus();
-    } else this.buttons.get("open")!.focus();
+      requestAnimationFrame(() => this.buttons.get("back")!.focus());
+    } else requestAnimationFrame(() => this.buttons.get("open")!.focus());
   }
-  draw(visible: boolean, results = false) {
-    for (const b of this.buttons.values()) b.style.display = "none";
-    const { ctx: c, w } = this.ui,
-      cx = w / 2,
-      rect = (x: number, y: number, a: number, b: number, color: string) => {
-        c.fillStyle = color;
-        c.fillRect(Math.round(x), Math.round(y), Math.round(a), Math.round(b));
-      };
-    const text = (
-      t: string,
-      x: number,
-      y: number,
-      size = 2,
-      color = "#fff2d2",
-      align: "left" | "center" | "right" = "left",
-    ) => pixelText(c, t, x, y, size, color, align);
-    const button = (
-      id: string,
-      label: string,
-      x: number,
-      y: number,
-      bw: number,
-      bh = 36,
-      enabled = true,
-    ) => {
-      const b = this.buttons.get(id)!;
-      b.textContent = label;
-      b.setAttribute("aria-label", label);
-      b.disabled = !enabled;
-      Object.assign(b.style, {
-        display: "block",
-        left: `${(x / w) * 100}%`,
-        top: `${(y / 540) * 100}%`,
-        width: `${(bw / w) * 100}%`,
-        height: `${(bh / 540) * 100}%`,
-      });
-      rect(x + 3, y + 3, bw, bh, "#061924");
-      rect(x, y, bw, bh, enabled ? "#28505d" : "#182f3d");
-      rect(x, y, bw, 2, enabled ? "#8cf0d1" : "#55717c");
-      text(
-        label,
-        x + bw / 2,
-        y + (bh - 7) / 2,
-        1,
-        enabled ? "#fff2d2" : "#96b6c2",
-        "center",
-      );
-    };
+  draw(_visible: boolean, _results = false) {
+    const p = this.panel;
     if (!this.open) {
-      if (results) {
-        button("open", "SHOP", cx - 128, 480, 256, 30);
-        text(this.workshop.status, cx, 519, 1, "#96b6c2", "center");
-      }
-      if (visible) {
-        const g = titleLayout(w);
-        button("open", "SHOP", g.left - 128, g.menuY + 98, 256, 32);
-        text(
-          this.workshop.status,
-          g.left,
-          g.menuY + 139,
-          1,
-          "#96b6c2",
-          "center",
-        );
-      }
+      p.hide();
       return;
     }
-    rect(0, 0, w, 540, "#0b2030");
-    for (let y = 0; y < 540; y += 16) rect(0, y, w, 1, "#102a3a");
-    text("SHOP", cx, 24, 3, "#ffcf58", "center");
-    text(
+    p.begin();
+    p.text("kicker", "DRESS FOR THE JACKPOT", "eyebrow");
+    p.heading("The workshop");
+    p.text(
+      "wallet",
       `${this.workshop.progress.wallet.toLocaleString("en-US")} COINS`,
-      cx,
-      64,
-      3,
-      "#ffcf58",
-      "center",
+      "wallet-badge",
     );
-    text(
-      "VACUUM COLOURS / SAME POWER. SAME GAME.",
-      cx,
-      96,
-      1,
-      "#96b6c2",
-      "center",
-    );
+    p.text("description", "Vacuum colours. Same power. More personality.");
+    const stage = p.group("stage", "shop-stage");
     const item = COSMETICS[this.selected];
-    const owned = this.workshop.progress.owned.includes(item.id),
-      equipped = this.workshop.progress.equipped === item.id;
-    rect(cx - 155, 121, 310, 154, "#173849");
-    rect(cx - 155, 271, 310, 4, "#295367");
-    // The pixel UI stretches on narrow portrait screens; keep the 3D object proportional.
-    const previewHeight =
-      130 * Math.min(1, innerWidth / w / (innerHeight / 540));
-    if (
-      !this.preview.draw(
-        c,
-        item,
-        cx - 155,
-        121 + (130 - previewHeight) / 2,
-        310,
-        previewHeight,
-      )
-    ) {
-      text(
-        this.preview.state === "error"
-          ? "3D PREVIEW UNAVAILABLE"
-          : "LOADING 3D PREVIEW",
-        cx,
-        185,
-        1,
-        "#96b6c2",
-        "center",
-      );
-    }
-    text(
-      `${this.selected + 1} / ${COSMETICS.length}`,
-      cx,
-      251,
-      1,
-      "#96b6c2",
-      "center",
+    const owned = this.workshop.progress.owned.includes(item.id);
+    const equipped = this.workshop.progress.equipped === item.id;
+    p.button("previous", this.buttons.get("previous")!, "<", stage);
+    const preview = p.group("preview", "shop-preview-frame", stage);
+    if (this.canvas.parentElement !== preview) preview.append(this.canvas);
+    const context = this.canvas.getContext("2d")!;
+    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const ready = this.preview.draw(
+      context,
+      item,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
     );
-    button("previous", "<", cx - 225, 177, 46, 46);
-    button("next", ">", cx + 179, 177, 46, 46);
-    text(item.name, cx, 291, 3, "#fff2d2", "center");
-    text(
+    if (!ready)
+      p.text(
+        "preview-state",
+        this.preview.state === "error"
+          ? "3D preview unavailable"
+          : "Loading 3D preview…",
+        "menu-note",
+        preview,
+      );
+    p.button("next", this.buttons.get("next")!, ">", stage);
+    p.text("index", `${this.selected + 1} / ${COSMETICS.length}`, "eyebrow");
+    p.node("h2", "item", item.name, "shop-item");
+    p.text(
+      "cost",
       equipped
         ? "EQUIPPED"
         : owned
           ? "OWNED"
           : `${item.cost.toLocaleString("en-US")} COINS`,
-      cx,
-      324,
-      2,
-      owned ? "#8cf0d1" : "#ffcf58",
-      "center",
+      "wallet-badge",
     );
-    button(
+    const buy = p.button(
       "buy",
+      this.buttons.get("buy")!,
       equipped
         ? "EQUIPPED"
         : owned
@@ -218,30 +139,35 @@ export class WorkshopUI {
           : this.workshop.progress.wallet >= item.cost
             ? "BUY + EQUIP"
             : "NOT ENOUGH COINS",
-      cx - 145,
-      357,
-      290,
-      42,
-      this.workshop.ready &&
-        !equipped &&
-        (owned || this.workshop.progress.wallet >= item.cost),
+      undefined,
+      true,
     );
-    text(this.workshop.status.slice(0, 64), cx, 414, 1, "#96b6c2", "center");
+    buy.disabled =
+      !this.workshop.ready ||
+      equipped ||
+      (!owned && this.workshop.progress.wallet < item.cost);
+    p.text("status", this.workshop.status, "menu-note");
+    const actions = p.group("actions");
     if (this.workshop.conflict) {
-      text(
-        "LOCAL COPY KEPT. EXPORT BEFORE CHOOSING CLOUD.",
-        cx,
-        437,
-        1,
-        "#ffcf58",
-        "center",
+      p.text(
+        "conflict",
+        "Local copy kept. Export before choosing cloud.",
+        "menu-error",
       );
-      button("export", "EXPORT LOCAL COPY", cx - 220, 460, 200, 34);
-      button("cloud", "USE CLOUD / ARCHIVE LOCAL", cx + 20, 460, 200, 34);
-      button("back", "BACK", cx - 90, 502, 180, 30);
-    } else {
-      button("sync", "SYNC NOW", cx - 200, 463, 180, 38);
-      button("back", "BACK", cx + 20, 463, 180, 38);
-    }
+      p.button(
+        "export",
+        this.buttons.get("export")!,
+        "EXPORT LOCAL COPY",
+        actions,
+      );
+      p.button(
+        "cloud",
+        this.buttons.get("cloud")!,
+        "USE CLOUD / ARCHIVE LOCAL",
+        actions,
+      );
+    } else p.button("sync", this.buttons.get("sync")!, "SYNC NOW", actions);
+    p.button("back", this.buttons.get("back")!, "BACK", actions);
+    p.end();
   }
 }

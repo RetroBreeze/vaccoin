@@ -159,3 +159,18 @@ export async function mockBackend(
   });
   return calls;
 }
+
+/** Follow the same entry gesture as players before interacting with menus. */
+export async function enterCasino(page) {
+  // Viewport suites control window sizes. The entry regression checks real gesture calls.
+  await page.evaluate(() => {
+    window.qaFullscreen = document.documentElement.requestFullscreen;
+    document.documentElement.requestFullscreen = undefined;
+  });
+  await page.locator('#enter-casino').click();
+  await page.locator('#entry-screen').waitFor({ state: 'hidden' });
+  await page.evaluate(() => {
+    document.documentElement.requestFullscreen = window.qaFullscreen;
+    delete window.qaFullscreen;
+  });
+}

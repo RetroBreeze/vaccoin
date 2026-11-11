@@ -1,11 +1,11 @@
 import type { Accounts } from "./accounts";
 import type { UI } from "./ui";
 import type { SwitchStrategy } from "@supagame/sdk-ts";
-import { pixelText, textWidth } from "./pixel-font";
+import { MenuSurface } from "./menu-surface";
 import { emptyProgress, validateProgress } from "./workshop-state";
-/** Native hit targets mirror Canvas controls for keyboard/touch accessibility. */
+/** Account actions and confirmations in a scrolling native menu. */
 export class AccountUI {
-  private email = document.createElement("div");
+  private panel = new MenuSurface("account-menu");
   private deletionNotice = document.createElement("div");
   private buttons = new Map<string, HTMLButtonElement>();
   private confirm?: SwitchStrategy | "signOut" | "deleteSave";
@@ -15,34 +15,34 @@ export class AccountUI {
     private toggle: () => void,
   ) {
     this.deletionNotice.id = "account-delete-description";
-    this.deletionNotice.textContent = "Delete Cloud Save removes cosmetic purchases and selections, wallet, total coins earned, completed runs, mute preference and saved operation records. Local saves and pending uploads are discarded. Leaderboards, achievements and your account remain unaffected. Historical backups may remain recoverable: up to five revisions for 30 days. This is not permanent erasure. A reset marker remains to block old uploads. Reload other devices with the updated game before playing. Choose Start Fresh after deletion.";
-    Object.assign(this.deletionNotice.style, {position: "fixed", left: "-10000px", width: "1px", height: "1px", overflow: "hidden"});
-    document.body.append(this.deletionNotice);
-    this.email.id = "account-email";
-    Object.assign(this.email.style, {
+    this.deletionNotice.textContent =
+      "Delete Cloud Save removes cosmetic purchases and selections, wallet, total coins earned, completed runs, mute preference and saved operation records. Local saves and pending uploads are discarded. Leaderboards, achievements and your account remain unaffected. Historical backups may remain recoverable: up to five revisions for 30 days. This is not permanent erasure. A reset marker remains to block old uploads. Reload other devices with the updated game before playing. Choose Start Fresh after deletion.";
+    Object.assign(this.deletionNotice.style, {
       position: "fixed",
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "calc(100% - 32px)",
-      textAlign: "center",
-      color: "#8cf0d1",
-      fontSize: "clamp(10px, 1.7vh, 16px)",
-      overflowWrap: "anywhere",
-      zIndex: "20",
-      display: "none",
+      left: "-10000px",
+      width: "1px",
+      height: "1px",
+      overflow: "hidden",
     });
-    document.body.append(this.email);
+    document.body.append(this.deletionNotice);
     const actions: Record<string, () => void> = {
-      deleteSave: () => { this.confirm = "deleteSave"; },
+      deleteSave: () => {
+        this.confirm = "deleteSave";
+      },
       startFresh: () => void account.startFresh(),
       review: () => void account.reviewLatest(),
       open: () => {
         account.open = true;
         this.toggle();
+        requestAnimationFrame(() =>
+          this.buttons.get("back")!.focus({ preventScroll: true }),
+        );
         void account.refresh().catch(() => {});
       },
       back: () => {
         account.open = false;
+        this.confirm = undefined;
+        requestAnimationFrame(() => this.buttons.get("open")!.focus());
       },
       link: () => void account.start("link"),
       signIn: () => void account.start("signIn"),
@@ -87,209 +87,140 @@ export class AccountUI {
       this.buttons.set(id, b);
     }
   }
-  draw(titleVisible: boolean) {
-    this.deletionNotice.hidden = !this.account.open || this.confirm !== "deleteSave";
-    const confirmButton = this.buttons.get("confirm")!;
-    if (this.confirm === "deleteSave") confirmButton.setAttribute("aria-describedby", this.deletionNotice.id);
-    else confirmButton.removeAttribute("aria-describedby");
-    for (const b of this.buttons.values()) b.style.display = "none";
-    this.email.textContent = this.account.email;
-    this.email.style.display =
-      this.account.open && this.account.email ? "block" : "none";
-    this.email.style.top = `${((this.confirm ? 65 : this.account.review ? 235 : 175) / 540) * 100}%`;
-    const { ctx: c, w } = this.ui,
-      cx = w / 2;
-    const text = (
-      t: string,
-      x: number,
-      y: number,
-      size = 1,
-      color = "#fff2d2",
-      maxWidth = Infinity,
-    ) => {
-      // Compensate the existing portrait canvas stretch for readable account text.
-      const scale = Math.max(1, innerHeight / 540 / (innerWidth / w));
-      const available = Math.min(maxWidth, x === cx ? w - 32 : w / 2 - 24);
-      c.save();
-      c.translate(x, y);
-      c.scale(Math.min(scale, available / Math.max(1, textWidth(t, size))), 1);
-      pixelText(c, t, 0, 0, size, color, "center");
-      c.restore();
-    };
-    const button = (
-      id: string,
-      label: string,
-      x: number,
-      y: number,
-      width = 260,
-    ) => {
-      const b = this.buttons.get(id)!;
-      b.textContent = label;
-      b.disabled = this.account.busy;
-      Object.assign(b.style, {
-        display: "block",
-        left: `${(x / w) * 100}%`,
-        top: `${(y / 540) * 100}%`,
-        width: `${(width / w) * 100}%`,
-        height: `${(34 / 540) * 100}%`,
-        zIndex: "20",
-      });
-      c.fillStyle = this.account.busy ? "#203644" : "#28505d";
-      c.fillRect(x, y, width, 34);
-      c.fillStyle = "#8cf0d1";
-      c.fillRect(x, y, width, 2);
-      text(label, x + width / 2, y + 14, 1, "#fff2d2", width - 16);
-    };
-    if (!this.account.open) {
-      if (titleVisible)
-        button("open", "ACCOUNT", w < 800 ? cx - 60 : 40, 508, 120);
-      return;
-    }
-    c.fillStyle = "#0b2030";
-    c.fillRect(0, 0, w, 540);
+  draw(_titleVisible: boolean) {
+    const p = this.panel;
     const a = this.account;
-    text(
+    this.deletionNotice.hidden = !a.open || this.confirm !== "deleteSave";
+    if (!a.open) {
+      p.hide();
+      return;
+    }
+    p.begin();
+    p.text("kicker", "YOUR SEAT AT THE TABLE", "eyebrow");
+    p.heading(
       a.review
-        ? "ACCOUNT ALREADY EXISTS"
+        ? "Account already exists"
         : a.status.providers.includes("google")
-          ? "GOOGLE ACCOUNT LINKED"
+          ? "Google account linked"
           : a.status.isAnonymous
-            ? "GUEST ACCOUNT"
-            : "ACCOUNT",
-      cx,
-      36,
-      2,
-      "#ffcf58",
+            ? "Guest account"
+            : "Account",
     );
+    if (a.email) p.text("email", a.email, "account-email").id = "account-email";
+    const pending: [string, string][] = [];
+    const button = (id: string, label: string) => {
+      pending.push([id, label]);
+      return this.buttons.get(id)!;
+    };
+    const confirmButton = this.buttons.get("confirm")!;
+    confirmButton.removeAttribute("aria-describedby");
     if (this.confirm === "deleteSave") {
-      text("DELETE CLOUD SAVE?", cx, 100, 2, "#ffcf58");
-      const lines = [
-        "DELETES COSMETIC PURCHASES AND SELECTIONS,",
-        "WALLET, TOTAL COINS, COMPLETED RUNS,",
-        "MUTE PREFERENCE AND SAVED OPERATION RECORDS.",
-        "LOCAL SAVES AND PENDING UPLOADS ARE DISCARDED.",
-        "LEADERBOARDS, ACHIEVEMENTS AND ACCOUNT STAY.",
-        "HISTORY MAY BE RECOVERABLE: LAST 5 / 30 DAYS.",
-        "THIS IS NOT PERMANENT ERASURE.",
-        "A RESET MARKER REMAINS TO BLOCK OLD UPLOADS.",
-        "UPDATE / RELOAD OTHER DEVICES BEFORE PLAYING.",
-        "AFTER DELETION, CHOOSE START FRESH.",
-      ];
-      lines.forEach((line, i) => text(line, cx, 145 + i * 20));
-      button("confirm", "DELETE CLOUD SAVE", cx - 130, 370);
-      button("decline", "CANCEL", cx - 130, 414);
-      return;
-    }
-    if (this.confirm) {
-      text(
-        this.confirm === "signOut"
-          ? "SIGN OUT ON THIS DEVICE?"
-          : "REPLACE GOOGLE CLOUD PROGRESS?",
-        cx,
-        100,
-        1,
-        "#ffcf58",
+      p.node("h2", "confirm-heading", "Delete cloud save?");
+      p.text(
+        "deletion",
+        this.deletionNotice.textContent!,
+        "deletion-description",
       );
-      text(
-        this.confirm === "signOut"
-          ? "GUEST COPIES REMAIN ON THIS DEVICE."
-          : "CLOUD BACKUP: 30 DAYS / LAST 5 PER SLOT",
-        cx,
-        130,
+      button("confirm", "DELETE CLOUD SAVE").setAttribute(
+        "aria-describedby",
+        this.deletionNotice.id,
       );
-      text("SCORES AND ACHIEVEMENTS WILL NOT TRANSFER.", cx, 153);
+      button("decline", "CANCEL");
+    } else if (this.confirm) {
+      p.node(
+        "h2",
+        "confirm-heading",
+        this.confirm === "signOut"
+          ? "Sign out on this device?"
+          : "Replace Google cloud progress?",
+      );
+      p.text(
+        "confirm-note",
+        this.confirm === "signOut"
+          ? "Guest copies remain on this device."
+          : "Cloud backup: 30 days / last 5 per slot",
+      );
+      p.text("transfer", "Scores and achievements will not transfer.");
       if (this.confirm === "merge") {
-        text("CHOOSE WALLET + STATISTICS + EQUIPMENT", cx, 195);
-        text(
-          `SELECTED: ${a.economy === "cloud" ? "GOOGLE" : "GUEST"}`,
-          cx,
-          220,
-          1,
-          "#8cf0d1",
+        p.text(
+          "economy",
+          `Choose wallet, statistics and equipment. Selected: ${a.economy === "cloud" ? "Google" : "Guest"}`,
+          "wallet-badge",
         );
-        button("cloudWallet", "USE GOOGLE WALLET", cx - 130, 250);
-        button("guestWallet", "USE GUEST WALLET", cx - 130, 294);
+        button("cloudWallet", "USE GOOGLE WALLET");
+        button("guestWallet", "USE GUEST WALLET");
       }
-      button("confirm", "CONFIRM", cx - 130, 370);
-      button("decline", "GO BACK", cx - 130, 414);
-      return;
-    }
-    if (a.review) {
-      text("WHICH PROGRESS WOULD YOU LIKE TO USE?", cx, 60);
-      text(
-        "SIGNED IN TO GOOGLE / KEEP GOOGLE SKIPS IMPORT",
-        cx,
-        78,
-        1,
-        "#8cf0d1",
-      );
+      button("confirm", "CONFIRM");
+      button("decline", "GO BACK");
+    } else if (a.review) {
+      p.text("review-question", "Which progress would you like to use?");
+      p.text("signed-in", "Signed in to Google. Keep Google skips import.");
+      const comparison = p.group("comparison", "save-comparison");
       const slot = a.review.slots.find((s) => s.slot === "vacuum-workshop");
       for (const [i, value] of [slot?.guest, slot?.cloud].entries()) {
-        const x = cx + (i ? 1 : -1) * Math.min(160, w / 4);
-        let p = emptyProgress();
+        const card = p.group(`save-${i}`, "casino-panel", comparison);
+        p.node("h2", `save-heading-${i}`, i ? "Google" : "Guest", "", card);
         try {
-          if (value?.data) p = validateProgress(value.data);
+          const progress = value?.data
+            ? validateProgress(value.data)
+            : emptyProgress();
+          p.text(
+            `save-data-${i}`,
+            `Wallet ${progress.wallet} · Earned ${progress.totalCoinsEarned} · Runs ${progress.completedRuns} · Designs ${progress.owned.length} · Equipped ${progress.equipped}`,
+            "menu-note",
+            card,
+          );
         } catch {
-          text("INVALID SAVE / EXPORT TO RECOVER", x, 110);
-          continue;
+          p.text(
+            `save-data-${i}`,
+            "Invalid save. Export to recover.",
+            "menu-error",
+            card,
+          );
         }
-        text(i ? "GOOGLE" : "GUEST", x, 100, 1, "#8cf0d1");
-        const lines = [
-          `WALLET ${p.wallet}`,
-          `EARNED ${p.totalCoinsEarned}`,
-          `RUNS ${p.completedRuns}`,
-          `DESIGNS ${p.owned.length}`,
-          `EQUIPPED ${p.equipped.toUpperCase()}`,
-        ];
-        lines.forEach((line, n) => text(line, x, 124 + n * 23));
       }
       if (a.needsReview) {
-        button("review", "REVIEW LATEST CLOUD", cx - 130, 255);
-        button("export", "EXPORT RECOVERY", cx - 130, 310);
-        text("REMOTE SAVE CHANGED. REVIEW BEFORE RETRY.", cx, 370);
-        return;
+        p.text(
+          "changed",
+          "Remote save changed. Review before retry.",
+          "menu-error",
+        );
+        button("review", "REVIEW LATEST CLOUD");
+      } else {
+        button("cloud", "KEEP GOOGLE PROGRESS");
+        button("guest", "KEEP GUEST PROGRESS");
+        button("merge", "MERGE PROGRESS");
+        button("defer", "DECIDE LATER / STAY SIGNED IN");
       }
-      button("cloud", "KEEP GOOGLE PROGRESS", cx - 130, 255);
-      button("guest", "KEEP GUEST PROGRESS", cx - 130, 299);
-      button("merge", "MERGE PROGRESS", cx - 130, 343);
-      button("defer", "DECIDE LATER / STAY SIGNED IN", cx - 130, 387);
-      button("export", "EXPORT RECOVERY", cx - 130, 431);
+      button("export", "EXPORT RECOVERY");
     } else {
-      text(
+      p.text(
+        "help",
         a.status.isAnonymous
-          ? "LINK TO KEEP THIS PLAYER ID AND PROGRESS."
-          : "PLAY ANONYMOUSLY OR RECOVER AN ACCOUNT.",
-        cx,
-        100,
+          ? "Link to keep this player ID and progress."
+          : "Play anonymously or recover an account.",
       );
       if (a.status.isAnonymous) {
-        button("link", "LINK GOOGLE", cx - 130, 150);
-        text("ALREADY HAVE AN ACCOUNT?", cx, 211);
-        button("signIn", "SIGN IN WITH GOOGLE", cx - 130, 234);
+        button("link", "LINK GOOGLE");
+        button("signIn", "SIGN IN WITH GOOGLE");
       } else if (a.status.userId) {
-        text("LINKED: " + a.status.providers.join(", ").toUpperCase(), cx, 145);
-        button("signOut", "SIGN OUT", cx - 130, 210);
-      } else button("signIn", "SIGN IN WITH GOOGLE", cx - 130, 180);
+        p.text("providers", "Linked: " + a.status.providers.join(", "));
+        button("signOut", "SIGN OUT");
+      } else button("signIn", "SIGN IN WITH GOOGLE");
       if (a.status.userId) {
-        button("deleteSave", "DELETE CLOUD SAVE", cx - 130, 270);
-        if (a.canStartFresh) button("startFresh", "START FRESH", cx - 130, 312);
+        button("deleteSave", "DELETE CLOUD SAVE");
+        if (a.canStartFresh) button("startFresh", "START FRESH");
       }
       button(
         "back",
         a.status.isAnonymous ? "RETURN TO GUEST GAME" : "BACK TO GAME",
-        cx - 130,
-        360,
       );
     }
-    const max = Math.max(24, Math.floor((w - 40) / 6));
-    const message = a.busy ? "WORKING / PLEASE WAIT" : a.message.toUpperCase();
-    for (let i = 0; i < 3; i++)
-      text(
-        message.slice(i * max, (i + 1) * max),
-        cx,
-        485 + i * 14,
-        1,
-        "#96b6c2",
-      );
+    p.text("status", a.busy ? "Working. Please wait…" : a.message, "menu-note");
+    const actions = p.group("actions", "account-actions");
+    for (const [id, label] of pending) {
+      p.button(id, this.buttons.get(id)!, label, actions).disabled = a.busy;
+    }
+    p.end();
   }
 }

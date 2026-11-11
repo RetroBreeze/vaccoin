@@ -17,7 +17,7 @@ try {
   await page.route("**/shop-qa", (r) =>
     r.fulfill({
       contentType: "text/html",
-      body: '<!doctype html><body style="margin:0"><canvas id="ui"></canvas></body>',
+      body: '<!doctype html><head><link rel="stylesheet" href="/src/style.css"></head><body class="casino-entered" style="margin:0"><canvas id="ui"></canvas></body>',
     }),
   );
   await page.goto("http://127.0.0.1:5173/shop-qa");
@@ -60,10 +60,10 @@ try {
       panel.draw(true);
       requestAnimationFrame(draw);
     };
+    panel.setOpen(true);
     draw();
     window.shopQA = { shop, panel, held, ui, canvas, options, Workshop };
   });
-  await page.getByRole("button", { name: "SHOP", exact: true }).click();
   await page.waitForFunction(
     () => window.shopQA.panel.preview.state === "ready",
   );

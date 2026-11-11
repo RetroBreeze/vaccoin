@@ -1,6 +1,6 @@
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 const origin = process.env.ACCOUNTS_TEST_ORIGIN ?? "http://127.0.0.1:5173";
 const browser = await chromium.launch({
   headless: true,
@@ -155,6 +155,8 @@ try {
           createdAt: "2026-11-10T00:00:00Z",
         });
       if (!url.pathname.includes("/saves")) return route.fallback();
+      if (url.pathname.endsWith('/saves/vacuum-workshop-reset'))
+        return reply(route, { code: 'SAVE_NOT_FOUND', message: 'No reset marker' }, 404);
       const current = saves.get(active);
       if (url.pathname.endsWith("/saves"))
         return reply(route, { slots: [current] });
@@ -182,6 +184,7 @@ try {
     });
     console.log("OPEN", strategy);
     await page.goto(`${origin}/?qa`);
+    await enterCasino(page);
     await page.waitForFunction(
       () => window.vaccoinQA?.snapshot().workshop.status === "CLOUD SAVED",
     );
@@ -194,6 +197,8 @@ try {
       })
       .click();
     console.log("AUTH STARTED", strategy);
+    await page.locator('#entry-screen').waitFor({ state: 'visible' });
+    await enterCasino(page);
     // Full navigation recreates the SDK and restores the durable snapshot.
     if (strategy === "cancelAuth") {
       await page
@@ -254,6 +259,7 @@ try {
           path: "test-results/accounts-deferred-state.png",
         });
         await page.reload();
+        await enterCasino(page);
         await page
           .getByRole("button", { name: "KEEP GOOGLE PROGRESS", exact: true })
           .waitFor({ state: "visible" });

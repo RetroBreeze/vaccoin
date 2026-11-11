@@ -1,4 +1,4 @@
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -15,6 +15,7 @@ try {
   await mockBackend(page, { offline: true, savedName: true });
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("http://127.0.0.1:5173/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("button", { name: "PLAY", exact: true }).click();
   await page.waitForFunction(() => window.vaccoinQA.snapshot().locked);

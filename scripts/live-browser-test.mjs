@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { mockBackend } from './mock-backend.mjs';
+import { mockBackend, enterCasino } from './mock-backend.mjs';
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 await mkdir('test-results',{recursive:true});
@@ -10,6 +10,7 @@ try {
     const calls=await mockBackend(page,{savedName:true});
     calls.mineRank = 12;
     await page.goto(`${process.env.VACCOIN_TEST_URL ?? 'http://127.0.0.1:5173'}/?qa`);
+    await enterCasino(page);
     await page.waitForFunction(()=>window.vaccoinQA?.snapshot().live.entries.length===10);
     await page.waitForFunction(()=>window.vaccoinQA.snapshot().live.status==='CONNECTED');
     await page.screenshot({path:`test-results/live-${label}.png`});

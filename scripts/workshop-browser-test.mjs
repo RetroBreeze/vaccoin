@@ -1,5 +1,5 @@
 import { chromium } from "@playwright/test";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 await mkdir("test-results", { recursive: true });
@@ -26,6 +26,7 @@ try {
       Object.defineProperty(crypto, "randomUUID", { value: undefined }),
     );
     await page.goto("http://127.0.0.1:5173/?qa");
+    await enterCasino(page);
     await page.waitForFunction(
       () => window.vaccoinQA?.snapshot().workshop.ready,
     );
@@ -75,6 +76,7 @@ try {
     await page.screenshot({ path: `test-results/workshop-owned-${label}.png` });
     await page.getByRole("button", { name: "BACK", exact: true }).click();
     await page.reload();
+    await enterCasino(page);
     await page.waitForFunction(
       () =>
         window.vaccoinQA?.snapshot().workshop.progress.equipped === "brick-red",
@@ -96,6 +98,7 @@ try {
       () => window.vaccoinQA.snapshot().workshop.progress.equipped === "chrome",
     );
     await page.reload();
+    await enterCasino(page);
     await page.waitForFunction(
       () =>
         window.vaccoinQA?.snapshot().workshop.progress.equipped === "chrome",

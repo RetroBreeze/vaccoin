@@ -1,7 +1,7 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 await mkdir("test-results", { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -18,6 +18,7 @@ try {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(`${origin}/?qa`);
+    await enterCasino(page);
     await page.waitForFunction(() => window.vaccoinQA);
     assert.equal(calls.signups, 0);
     await page.getByRole("textbox", { name: "DISPLAY NAME" }).fill("Mara");
@@ -65,6 +66,7 @@ try {
       0,
     );
     await page.reload();
+    await enterCasino(page);
     await page.waitForFunction(() =>
       window.vaccoinQA?.snapshot().online.startsWith("GLOBAL"),
     );

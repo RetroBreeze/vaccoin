@@ -1,5 +1,5 @@
 import { chromium } from "@playwright/test";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const origin = process.env.CASINO_TEST_ORIGIN ?? "http://localhost:5175";
@@ -16,6 +16,7 @@ page.on("pageerror", (e) => errors.push(e.message));
 await mockBackend(page, { offline: true, savedName: true, appOrigin: origin });
 try {
   await page.goto(origin + "/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => !!window.vaccoinQA, null, {
     timeout: 60000,
   });

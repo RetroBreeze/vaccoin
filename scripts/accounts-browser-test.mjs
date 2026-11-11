@@ -1,6 +1,6 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 const browser = await chromium.launch({
   headless: true,
   args: ["--no-sandbox", "--enable-gpu"],
@@ -24,6 +24,7 @@ try {
     await page.goto(
       `${process.env.ACCOUNTS_TEST_ORIGIN ?? "http://127.0.0.1:5173"}/?qa`,
     );
+    await enterCasino(page);
     await page.waitForFunction(() => !!window.vaccoinQA);
     await page.getByRole("button", { name: "ACCOUNT", exact: true }).click();
     await page

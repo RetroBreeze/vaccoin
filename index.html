@@ -14,10 +14,19 @@
     <title>VACCOIN</title>
   </head>
   <body>
+    <section id="entry-screen" aria-label="Welcome to Vaccoin">
+      <button id="enter-casino" type="button" disabled aria-label="Click or tap to start">
+        <span class="entry-eyebrow">THE GRAND CASINO PRESENTS</span>
+        <img class="entry-logo" src="/assets/logo.png" alt="Vaccoin" />
+        <span class="entry-prompt">OPENING THE DOORS…</span>
+        <span class="entry-caption">One vacuum. One minute. All that gold.</span>
+      </button>
+    </section>
     <canvas id="world" aria-label="Vaccoin 3D arena"></canvas
     ><canvas id="ui" aria-label="Vaccoin game interface"></canvas
     ><button id="play" aria-label="Play Vaccoin">Play</button
     ><button id="sound" aria-label="Mute sound">Sound</button>
+    <button id="main-menu" class="utility" type="button" hidden>Main menu</button>
     <button
       id="pause"
       class="utility"

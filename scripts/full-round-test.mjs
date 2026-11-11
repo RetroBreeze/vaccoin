@@ -1,4 +1,4 @@
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -13,6 +13,7 @@ await mockBackend(page, { offline: true, savedName: true });
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.goto("http://127.0.0.1:5173/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.keyboard.press("m");
   const started = Date.now();

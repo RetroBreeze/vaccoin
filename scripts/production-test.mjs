@@ -1,4 +1,4 @@
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({
@@ -18,6 +18,7 @@ try {
       failed.push(r.url());
   });
   await page.goto("http://127.0.0.1:4173/?qa");
+  await enterCasino(page);
   await page.getByRole("button", { name: "PLAY", exact: true }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.vaccoinQA), "undefined");
   await page.getByRole("button", { name: "PLAY", exact: true }).click();

@@ -3,7 +3,8 @@ import { AccountUI } from './account-ui';
 import { Workshop, type WorkshopRecord } from './workshop';
 import { WorkshopUI } from './workshop-ui';
 import { createIndexedDbStore } from '@supagame/sdk-ts/browser';
-import { titleLayout } from "./title-screen";
+import { MenuUI } from "./menu-ui";
+import { installEntryScreen } from "./entry-screen";
 import "./style.css";
 import { Vector3 } from "three";
 import { Assets } from "./assets";
@@ -74,13 +75,17 @@ async function boot() {
   achievementsButton.addEventListener('click', () => {
     achievementsOpen = !achievementsOpen;
     if (achievementsOpen) void leaderboard.browseAchievements().catch(() => {});
+    requestAnimationFrame(() => achievementsButton.focus({ preventScroll: true }));
   });
   const pauseButton = document.querySelector<HTMLButtonElement>("#pause")!;
+  const mainMenuButton = document.querySelector<HTMLButtonElement>("#main-menu")!;
   const rotatePrompt = document.querySelector<HTMLElement>("#rotate-device")!;
   const displayMessage =
     document.querySelector<HTMLElement>("#display-message")!;
   const mobile = matchMedia("(pointer: coarse)").matches;
   const immersive = new ImmersiveDisplay(mobile);
+  const audio = new AudioEngine();
+  const entered = installEntryScreen(audio, immersive);
   const touch = new TouchControls(
     document.querySelector<HTMLElement>("#touch-controls")!,
   );
@@ -138,15 +143,11 @@ async function boot() {
   const player = new Player(),
     vacuum = new Vacuum(view.camera),
     effects = new Effects(view.scene, view.camera),
-    audio = new AudioEngine(),
     round = new Round(),
     leaderboard = new Leaderboard(undefined, connection?.game),
     ui = new UI(
       uiCanvas,
-      button,
-      soundButton,
-      retryButton,
-      leaderboardControls,
+      new MenuUI(),
     );
   leaderboard.setAccountScope(`${connection?.namespace ?? 'local'}:${activePlayer ?? 'local-guest'}`);
   const workshop = new Workshop({
@@ -375,6 +376,16 @@ async function boot() {
     if (document.pointerLockElement) document.exitPointerLock();
   }
   pauseButton.addEventListener("click", pauseControls);
+  mainMenuButton.addEventListener("click", () => {
+    if (round.phase !== "results") return;
+    pauseControls();
+    round.phase = "title";
+    leaderboardOpen = false;
+    achievementsOpen = false;
+    error = "";
+    status.textContent = "Main menu.";
+    button.focus();
+  });
   function cameraToPlayer() {
     view.camera.position.copy(player.position);
     view.camera.position.y += 1.7;
@@ -413,7 +424,7 @@ async function boot() {
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
   ) {
-    if (leaderboardOpen || achievementsOpen || workshopUI.open || accounts.open || accounts.busy) return;
+    if (!entered() || leaderboardOpen || achievementsOpen || workshopUI.open || accounts.open || accounts.busy) return;
     if (editingName) {
       void saveNameEdit();
       return;
@@ -460,8 +471,8 @@ async function boot() {
     }
   }
   button.addEventListener("click", () => void play());
-  document.addEventListener("pointerdown", () => void audio.unlock());
-  document.addEventListener("keydown", () => void audio.unlock());
+  document.addEventListener("pointerup", () => { if (entered()) void audio.unlock(); });
+  document.addEventListener("keydown", () => { if (entered()) void audio.unlock(); });
   canvas.addEventListener("click", () => {
     if (!controlsActive() && round.phase === "playing") void play();
   });
@@ -500,6 +511,7 @@ async function boot() {
   });
   document.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("keydown", (e) => {
+    if (!entered()) return;
     if (
       e.target instanceof HTMLButtonElement &&
       (e.code === "Enter" || e.code === "Space")
@@ -626,7 +638,7 @@ async function boot() {
       if (round.phase === "playing" && controlsActive()) pauseControls();
       else void play(false, "gamepad");
     }
-    rotatePrompt.hidden = !portrait() || round.phase === "title" || accounts.open;
+    rotatePrompt.hidden = !portrait() || round.phase !== "playing" || accounts.open;
     if (portrait() && (portableActive || locked)) pauseControls();
     const active = round.phase === "playing" && controlsActive();
     audio.updateMusic(active);
@@ -686,14 +698,6 @@ async function boot() {
         view.camera.updateProjectionMatrix();
       }
     }
-    if (round.phase === "title") {
-      const layout = titleLayout(ui.w);
-      for (const panel of [namePanel, savedNamePanel]) {
-        panel.style.left = `${(layout.nameX / ui.w) * 100}%`;
-        panel.style.top = `${((layout.nameY - (panel === namePanel && editingName ? (layout.stacked ? 24 : 44) : 0)) / 540) * 100}%`;
-        panel.style.width = `${(256 / ui.w) * 100}%`;
-      }
-    }
     const titleVisible = round.phase === "title" && !leaderboardOpen && !achievementsOpen && !workshopUI.open && !accounts.open;
     namePanel.hidden = !titleVisible || (!!profile.name && !editingName);
     savedNamePanel.hidden = !titleVisible || !profile.name || editingName;
@@ -743,19 +747,13 @@ async function boot() {
     updateCasinoVisibility(view.scene,view.camera.position.y);
     atmosphere.update(now / 1000, destructibles.objects);
     spectacle.update(now / 1000);
-    // The Shop is opaque; avoid rendering the casino behind its 3D preview.
-    if (!workshopUI.open) view.draw();
+    // Native menus are opaque; reserve arena rendering for active gameplay.
+    if (entered() && round.phase === "playing" && controlsActive() && !workshopUI.open && !accounts.open) view.draw();
     ui.draw(uiState, elapsed);
-    ui.drawAchievements(uiState, achievementsButton);
-    if (workshopUI.open) {
-      for (const b of [button, retryButton, achievementsButton, ...Object.values(leaderboardControls)]) b.style.display = 'none';
-    }
+    if (workshopUI.open || accounts.open) ui.menus?.hide();
     workshopUI.draw(titleVisible, round.phase === 'results' && !accounts.open);
     accountUI.draw(titleVisible);
-    if (accounts.open) {
-      for (const b of [button, retryButton, achievementsButton, ...Object.values(leaderboardControls)]) b.style.display = 'none';
-      for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('[id^="workshop-"]'))) b.style.display = 'none';
-    }
+
 
   }
   // Deliberately dev-only QA hooks; stripped out of the production build.

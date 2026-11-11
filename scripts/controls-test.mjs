@@ -1,7 +1,7 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 await mkdir("test-results", { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -13,6 +13,7 @@ async function ready(page, savedName = true) {
   page.on("pageerror", (error) => errors.push(error.message));
   await mockBackend(page, { offline: true, savedName });
   await page.goto("http://127.0.0.1:5173/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
 }
 const centre = async (page, id) => {

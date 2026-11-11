@@ -1,6 +1,6 @@
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 
 const origin = process.argv[2] || "http://localhost:5173";
 const browser = await chromium.launch({
@@ -41,6 +41,7 @@ try {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${origin}/?qa`);
+  await enterCasino(page);
   await page.waitForFunction(
     () => window.vaccoinQA?.snapshot().live.status === "CONNECTED",
   );
@@ -58,7 +59,10 @@ try {
   await expect(page.locator("#saved-player-name")).toBeVisible();
   assert.equal(remoteName, "Nova");
   assert.equal(
-    await page.evaluate(() => localStorage.getItem("vaccoin.display-name.v1")),
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => key.startsWith('vaccoin.display-name.v1:') && key.endsWith(':11111111-1111-4111-8111-111111111111'));
+      return key ? localStorage.getItem(key) : null;
+    }),
     "Nova",
   );
   assert.equal(
@@ -93,7 +97,10 @@ try {
     "Couldn't save. Try again.",
   );
   assert.equal(
-    await page.evaluate(() => localStorage.getItem("vaccoin.display-name.v1")),
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => key.startsWith('vaccoin.display-name.v1:') && key.endsWith(':11111111-1111-4111-8111-111111111111'));
+      return key ? localStorage.getItem(key) : null;
+    }),
     "Nova",
   );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -108,6 +115,7 @@ try {
   });
   await mockBackend(touchPage, { appOrigin: origin, savedName: true });
   await touchPage.goto(`${origin}/?qa`);
+  await enterCasino(touchPage);
   await touchPage
     .getByRole("button", { name: "Change name", exact: true })
     .click();

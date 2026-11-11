@@ -1,5 +1,5 @@
 import { chromium } from "@playwright/test";
-import { mockBackend } from "./mock-backend.mjs";
+import { mockBackend, enterCasino } from "./mock-backend.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 const origin = process.env.CASINO_TEST_ORIGIN ?? "http://127.0.0.1:5175";
@@ -22,6 +22,7 @@ try {
   });
   await mkdir("test-results", { recursive: true });
   await page.goto(origin + "/?qa");
+  await enterCasino(page);
   await page.waitForFunction(() => !!window.vaccoinQA, null, {
     timeout: 60000,
   });

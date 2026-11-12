@@ -6,7 +6,6 @@ import {
   casinoSurfaces,
   casinoWalls,
   casinoRooms,
-  casinoFurniture,
   casinoColumns,
 } from "./casino-layout";
 
@@ -210,13 +209,6 @@ export function buildArena(scene: T.Scene, assets: Assets) {
       }
     box((b.x0 + b.x1) / 2, b.y0 + 0.15, (b.z0 + b.z1) / 2, w, 0.22, d + 0.05);
     box((b.x0 + b.x1) / 2, b.y1 - 0.2, (b.z0 + b.z1) / 2, w, 0.15, d + 0.05);
-  }
-  for (const f of casinoFurniture) {
-    visibleMin = f.y;
-    visibleMax = f.y === 0 ? 16 : f.y + 8;
-    fit(f.key, f.x, f.y, f.z, f.width, f.height, f.depth, f.rotation);
-    if (f.key === "roulette")
-      fit("wheel", f.x - 1, f.y + 0.95, f.z, 0.9, 0.22, 0.9);
   }
   for (const r of casinoRooms) {
     visibleMin = r.y;

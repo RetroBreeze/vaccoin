@@ -1,11 +1,18 @@
 import { casinoLoot } from "./casino-loot";
 import { VALUES, burstKind } from "./collectibles";
-import { casinoMachines } from "./casino-layout";
+import { casinoFurniture, casinoMachines } from "./casino-layout";
+import { furnitureCoinReward } from "./furniture-rewards";
 export const LOOSE_COINS = casinoLoot.length;
 export const SMALL_CRATE_COINS = 180;
 export const LARGE_CRATE_COINS = 240;
+const furnitureCoins = casinoFurniture.reduce(
+  (total, furniture) => total + furnitureCoinReward(furniture.key),
+  0,
+);
 export const TOTAL_COINS =
-  LOOSE_COINS + casinoMachines.reduce((n, m) => n + m.coins, 0);
+  LOOSE_COINS +
+  casinoMachines.reduce((n, m) => n + m.coins, 0) +
+  furnitureCoins;
 // Exact maximum possible score, independent of collection/burst order.
 export const TOTAL_POINTS =
   casinoLoot.reduce((sum, item) => sum + VALUES[item.kind], 0) +
@@ -17,4 +24,5 @@ export const TOTAL_POINTS =
         0,
       ),
     0,
-  );
+  ) +
+  furnitureCoins;

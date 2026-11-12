@@ -4,6 +4,7 @@ import {
   furnitureSolids,
   columnSolids,
   CASINO_BOUNDS,
+  type Solid,
 } from "./casino-layout";
 export interface Surface {
   id: string;
@@ -17,6 +18,29 @@ export interface Surface {
 }
 export const surfaces: Surface[] = casinoSurfaces;
 export const obstacles = [...casinoWalls, ...furnitureSolids, ...columnSolids];
+const brokenFurniture = new Set<number>();
+export function setFurnitureBroken(index: number, broken: boolean) {
+  if (broken) brokenFurniture.add(index);
+  else brokenFurniture.delete(index);
+}
+export function resetFurnitureCollisions() {
+  brokenFurniture.clear();
+}
+function solidActive(solid: Solid) {
+  return (
+    solid.furnitureId === undefined || !brokenFurniture.has(solid.furnitureId)
+  );
+}
+function overlapsBody(b: Solid, x: number, z: number, y: number, r: number) {
+  return (
+    x > b.x0 - r &&
+    x < b.x1 + r &&
+    z > b.z0 - r &&
+    z < b.z1 + r &&
+    y + 1.65 > b.y0 &&
+    y < b.y1
+  );
+}
 // Static broad phase: dense furniture should not make every moving coin scan
 // the entire building. Padding covers the largest normal body/coin query radius.
 function spatialIndex<
@@ -44,6 +68,24 @@ function spatialIndex<
 const localObstacles = spatialIndex(obstacles, 1),
   localSurfaces = spatialIndex(surfaces, 0);
 
+/** Collision contacts use attempted movement, because a blocked player's speed is zero. */
+export function bodyFurnitureContacts(
+  x: number,
+  z: number,
+  y: number,
+  r = 0.38,
+) {
+  const contacts: number[] = [];
+  for (const b of localObstacles(x, z))
+    if (
+      b.furnitureId !== undefined &&
+      solidActive(b) &&
+      overlapsBody(b, x, z, y, r)
+    )
+      contacts.push(b.furnitureId);
+  return contacts;
+}
+
 export function contains(s: Surface, x: number, z: number, pad = 0) {
   return (
     x >= s.x0 - pad && x <= s.x1 + pad && z >= s.z0 - pad && z <= s.z1 + pad
@@ -60,6 +102,7 @@ export function landingHeight(
   previousY: number,
   nextY: number,
   step = 0.22,
+  ignoreFurniture = false,
 ) {
   let best = -Infinity;
   for (const s of localSurfaces(x, z)) {
@@ -69,6 +112,8 @@ export function landingHeight(
   }
   for (const b of localObstacles(x, z)) {
     if (
+      solidActive(b) &&
+      !(ignoreFurniture && b.furnitureId !== undefined) &&
       x >= b.x0 &&
       x <= b.x1 &&
       z >= b.z0 &&
@@ -95,7 +140,13 @@ export function ceilingHeight(
   }
   return best;
 }
-export function blockedBody(x: number, z: number, y: number, r = 0.38) {
+export function blockedBody(
+  x: number,
+  z: number,
+  y: number,
+  r = 0.38,
+  ignoreFurniture = false,
+) {
   if (
     x < CASINO_BOUNDS.x0 + r ||
     x > CASINO_BOUNDS.x1 - r ||
@@ -105,12 +156,9 @@ export function blockedBody(x: number, z: number, y: number, r = 0.38) {
     return true;
   for (const b of r <= 1 ? localObstacles(x, z) : obstacles)
     if (
-      x > b.x0 - r &&
-      x < b.x1 + r &&
-      z > b.z0 - r &&
-      z < b.z1 + r &&
-      y + 1.65 > b.y0 &&
-      y < b.y1
+      !(ignoreFurniture && b.furnitureId !== undefined) &&
+      solidActive(b) &&
+      overlapsBody(b, x, z, y, r)
     )
       return true;
   for (const s of localSurfaces(x, z)) {
@@ -127,6 +175,7 @@ export function lineBlocked(
   bx: number,
   by: number,
   bz: number,
+  ignoreFurniture?: number,
 ) {
   // Surface-plane intersection; both sides of every deck are occluders.
   for (const s of surfaces) {
@@ -143,6 +192,11 @@ export function lineBlocked(
       return true;
   }
   for (const b of obstacles) {
+    if (
+      !solidActive(b) ||
+      (b.furnitureId !== undefined && b.furnitureId === ignoreFurniture)
+    )
+      continue;
     if (
       Math.max(ax, bx) < b.x0 ||
       Math.min(ax, bx) > b.x1 ||
@@ -187,6 +241,7 @@ export function zone(y: number) {
 export function coinSolid(x: number, y: number, z: number, r = 0.12) {
   for (const b of r <= 1 ? localObstacles(x, z) : obstacles)
     if (
+      solidActive(b) &&
       x > b.x0 - r &&
       x < b.x1 + r &&
       z > b.z0 - r &&

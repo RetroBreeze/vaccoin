@@ -171,7 +171,13 @@ export class Coins {
       this.dirtyMax = 0;
     }
   }
-  burst(x: number, y: number, z: number, n: number) {
+  burst(
+    x: number,
+    y: number,
+    z: number,
+    n: number,
+    composition: "mixed" | "coins" = "mixed",
+  ) {
     const amount = Math.min(n, TOTAL_COINS - this.count);
     // Each source gets the same shower regardless of which wing was visited first.
     const burstRandom = seeded(Math.round(x * 71 + y * 137 + z * 197));
@@ -185,7 +191,7 @@ export class Coins {
       this.velocities[p] = Math.cos(a) * (6 + burstRandom() * 5);
       this.velocities[p + 1] = 9 + burstRandom() * 6;
       this.velocities[p + 2] = Math.sin(a) * (6 + burstRandom() * 5);
-      const kind = burstKind(j);
+      const kind = composition === "coins" ? 0 : burstKind(j);
       this.kinds[id] = kind;
       this.meshIds[id] = (y < -2 ? 0 : y > 4 ? 12 : 6) + kind;
       this.slots[id] = this.kindCounts[this.meshIds[id]]++;

@@ -19,6 +19,11 @@ it("instances the banks, removes burst cabinets and restores every transform on 
     burst = vi.fn(),
     onBurst = vi.fn();
   const assets = {
+    fit: () => {
+      const g = new Group();
+      g.add(new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial()));
+      return g;
+    },
     model: () => {
       const g = new Group();
       g.add(new Mesh(new BoxGeometry(1, 2.4, 1), new MeshBasicMaterial()));
@@ -32,9 +37,11 @@ it("instances the banks, removes burst cabinets and restores every transform on 
     onBurst,
   );
   expect(machines.objects.length).toBe(casinoMachines.length);
-  expect(scene.children.filter((m) => m instanceof InstancedMesh).length).toBe(
-    3,
-  );
+  expect(
+    scene.children.filter(
+      (m) => m instanceof InstancedMesh && !m.name.startsWith("furniture-"),
+    ).length,
+  ).toBe(3);
   const player = new Player();
   player.position.set(-30.9, 0, -22);
   const eye = new Vector3(-30.9, 1.7, -22),

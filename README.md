@@ -53,16 +53,18 @@ The countdown and **60-second clock pause** when you stop controls, release the 
 
 Start by sweeping the valuables in the entrance. Hold suction on slot machines until they burst. Explore the slot gallery, roulette hall and blackjack salon; follow signs to the two stair cores for the upper poker rooms, high-limit salon and pearl lounge, or descend to the cashier, counting rooms and bullion vault. The upper promenade overlooks the atrium, with a deliberate drop shortcut at its southern edge. No lifts or door timers interrupt a run.
 
+Run straight through chairs, tables and decorations to send them hopping, spinning and tumbling aside without losing speed. They bounce off the surroundings and settle, ready to be shoved again. Vacuum them for about a second to break them for 2–8 ordinary coins, even after they've moved. Suction makes props glow and wobble; pushing alone awards no coins. Every run restores the original furniture layout.
+
 Coins score **1**, large coins **10**, dollar bills **25**, gold bars **100**, pearls **250**, and diamonds **500**. Every placement and machine payout repeats exactly; route choice and movement determine the score. Workshop earnings use the run's point value, retaining existing balances and cosmetics.
 
 ## Casino implementation
 
 - An 84 × 76 footprint with three storeys at -5, 0 and 5, twelve enclosed rooms, rear passages, twin stair cores and an open central atrium.
 - Shared layout data drives visible walls, floors, furniture and collision. The existing accelerated movement, jumping and fixed 120 Hz physics remain.
-- **45,997 loose valuables plus 15,760 items in 184 machines: 61,757 physical collectibles, worth 115,432 points.** Points and collected-item counts are tracked separately.
+- **45,997 loose valuables, 15,760 items in 184 machines, and 2,328 coins in 558 furniture props: 64,085 physical collectibles, worth 117,760 points.** Points and collected-item counts are tracked separately.
 - Dense, deterministic floor coverage connects room piles through every corridor and stairway. Typed instanced meshes partitioned by kind and floor, a spatial hash and a maximum of 1,800 active items preserve curved suction and ballistic payouts. Walls, columns and decks occlude suction.
 - Twenty-four selected GLBs from the supplied PSX Casino, Slot Machines and Table Games packs, with their baked red-and-gold Quarkery textures. Authored collision helper meshes are removed from rendering; static parts share geometry/materials and are batched.
-- Native-resolution rendering at the viewport’s device-pixel ratio with antialiasing, textured casino architecture, room signs, room-name HUD and valuable pickup feedback.
+- Adaptive rendering with capped resolution, textured casino architecture, room signs, room-name HUD and valuable pickup feedback. Breakable furniture is instanced, with a warm brightness lift and damage tint; only moving or changing instances upload transforms.
 - Accounts, workshop saves, achievements, controls and leaderboard integration retained.
 
 Run `python scripts/extract-casino-assets.py` to reproduce the runtime assets from the archives in `public/assets`. Source provenance is recorded in `public/assets/casino/provenance.json`. Production builds exclude the large ZIP archives; source copies remain intact.
@@ -82,6 +84,7 @@ npm test
 npm run build
 npm run dev -- --port 5173
 CASINO_TEST_ORIGIN=http://localhost:5173 node scripts/casino-browser-test.mjs
+node scripts/furniture-browser-test.mjs
 ```
 
 This checks weighted collection, actual staircase movement, slot bursts, reset and expiry, with screenshots of each floor. Historical mint-specific browser scripts remain as references; their old teleports and crate expectations do not describe the casino. See [casino verification and release notes](docs/casino-verification.md).

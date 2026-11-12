@@ -806,6 +806,7 @@ async function boot() {
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("qa")) {
     Object.assign(window, {
       vaccoinQA: {
+        furniture: () => destructibles.furniture.objects.map(({id, key, x, y, z, rx, rz, tossed, moving, broken}) => ({id, key, x, y, z, rx, rz, tossed, moving, broken})),
         snapshot: () => ({
           workshop: {open:workshopUI.open,progress:workshop.progress,status:workshop.status,ready:workshop.ready,cosmetic:vacuum.cosmetic},
           achievements: {open: achievementsOpen, rows: leaderboard.achievements.rows, notice:leaderboard.achievements.queue?.current ?? null},

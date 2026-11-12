@@ -10,6 +10,7 @@ export interface Deck {
   color: number;
 }
 export interface Solid {
+  furnitureId?: number;
   x0: number;
   x1: number;
   z0: number;
@@ -329,9 +330,9 @@ for (const side of [-1, 1])
     prop("cash-table", side * 5, -5, z, 3, 0.95, 1.5);
     prop("chair", side * 5, -5, z + 1.4, 0.62, 1.02, 0.65);
   }
-export const furnitureSolids: Solid[] = casinoFurniture
-  .filter((f) => f.solid)
-  .map((f) => {
+export const furnitureSolids: Solid[] = casinoFurniture.flatMap(
+  (f, furnitureId) => {
+    if (!f.solid) return [];
     const stem = f.key === "palm",
       w = stem ? 0.55 : f.width,
       d = stem ? 0.55 : f.depth,
@@ -339,15 +340,19 @@ export const furnitureSolids: Solid[] = casinoFurniture
       s = Math.abs(Math.sin(f.rotation));
     const hw = (c * w + s * d) / 2,
       hd = (s * w + c * d) / 2;
-    return {
-      x0: f.x - hw,
-      x1: f.x + hw,
-      z0: f.z - hd,
-      z1: f.z + hd,
-      y0: f.y,
-      y1: f.y + (stem ? 1 : f.height),
-    };
-  });
+    return [
+      {
+        furnitureId,
+        x0: f.x - hw,
+        x1: f.x + hw,
+        z0: f.z - hd,
+        z1: f.z + hd,
+        y0: f.y,
+        y1: f.y + (stem ? 1 : f.height),
+      },
+    ];
+  },
+);
 export function casinoZone(x: number, y: number, z: number) {
   return (
     casinoRooms.find(

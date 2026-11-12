@@ -9,7 +9,8 @@ import {
 import { Coins } from "../src/coins";
 import { BoxGeometry, MeshBasicMaterial, Vector3, Group, Mesh } from "three";
 import { prepareCasinoModel } from "../src/assets";
-import { casinoMachines } from "../src/casino-layout";
+import { casinoFurniture, casinoMachines } from "../src/casino-layout";
+import { furnitureCoinReward } from "../src/furniture-rewards";
 import { TOTAL_COINS, TOTAL_POINTS } from "../src/coin-counts";
 import { VALUES } from "../src/collectibles";
 
@@ -102,19 +103,58 @@ it("atrium columns block movement and suction on both public floors", () => {
     expect(lineBlocked(-10, y + 1, 11, -6, y + 1, 11)).toBe(true);
   }
 });
-it("reserves the exact physical capacity and point budget of every payout", () => {
+it.each([
+  [-5, false],
+  [-5, true],
+  [0, false],
+  [0, true],
+  [5, false],
+  [5, true],
+] as const)(
+  "fits every payout on floor %s with reversed order %s",
+  (floor, reverse) => {
+    const c = new Coins(new BoxGeometry(), new MeshBasicMaterial());
+    const payouts = [
+      ...casinoMachines.map((m) => ({ ...m, composition: "mixed" as const })),
+      ...casinoFurniture.map((f) => ({
+        ...f,
+        coins: furnitureCoinReward(f.key),
+        composition: "coins" as const,
+      })),
+    ].sort((a, b) => a.x - b.x || a.z - b.z);
+    if (reverse) payouts.reverse();
+    for (const payout of payouts)
+      expect(
+        c.burst(
+          payout.x,
+          floor + 1.5,
+          payout.z,
+          payout.coins,
+          payout.composition,
+        ),
+      ).toBe(payout.coins);
+    expect(c.count).toBe(TOTAL_COINS);
+    expect(
+      Array.from(c.kinds.slice(0, c.count)).reduce(
+        (sum, k) => sum + VALUES[k],
+        0,
+      ),
+    ).toBe(TOTAL_POINTS);
+    expect(c.burst(0, floor + 1.5, 0, 1, "coins")).toBe(0);
+    for (const mesh of c.meshes)
+      expect(mesh.count).toBeLessThanOrEqual(mesh.instanceMatrix.count);
+  },
+);
+it("releases ordinary furniture coins without changing machine valuables", () => {
   const c = new Coins(new BoxGeometry(), new MeshBasicMaterial());
-  for (const machine of casinoMachines)
-    expect(c.burst(machine.x, machine.y + 1.5, machine.z, machine.coins)).toBe(
-      machine.coins,
-    );
-  expect(c.count).toBe(TOTAL_COINS);
-  expect(
-    Array.from(c.kinds.slice(0, c.count)).reduce(
-      (sum, k) => sum + VALUES[k],
-      0,
-    ),
-  ).toBe(TOTAL_POINTS);
+  const start = c.count;
+  expect(c.burst(0, 1, 0, 8, "coins")).toBe(8);
+  expect(Array.from(c.kinds.slice(start, c.count))).toEqual(Array(8).fill(0));
+  const machineStart = c.count;
+  c.burst(0, 1, 0, 80);
+  expect(new Set(c.kinds.slice(machineStart, c.count))).toEqual(
+    new Set([0, 1, 2]),
+  );
 });
 it("keeps treasure on adjoining floors visible through connected openings", () => {
   const c = new Coins(new BoxGeometry(), new MeshBasicMaterial());

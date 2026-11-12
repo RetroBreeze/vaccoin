@@ -4,6 +4,8 @@ import { Assets } from "./assets";
 import { Coins } from "./coins";
 import { Player } from "./player";
 import { lineBlocked } from "./terrain";
+import { FurnitureInstances } from "./furniture-rendering";
+import { FurnitureDestructibles } from "./furniture";
 export interface Crate {
   mesh: Group;
   x: number;
@@ -18,12 +20,18 @@ export interface Crate {
 }
 export class Destructibles {
   readonly objects: Crate[] = [];
+  readonly furniture: FurnitureDestructibles;
   constructor(
     scene: Scene,
     assets: Assets,
     private coins: Coins,
     private onBurst: (x: number, y: number, z: number, n: number) => void,
   ) {
+    this.furniture = new FurnitureDestructibles(
+      new FurnitureInstances(scene, assets),
+      coins,
+      onBurst,
+    );
     for (const key of new Set(casinoMachines.map((m) => m.key))) {
       const specs = casinoMachines.filter((m) => m.key === key),
         prototype = assets.model(key, 2.4),
@@ -69,6 +77,7 @@ export class Destructibles {
   }
 
   reset() {
+    this.furniture.reset();
     for (const o of this.objects) {
       o.broken = false;
       o.strain = 0;
@@ -87,7 +96,14 @@ export class Destructibles {
     direction: Vector3,
     sucking: boolean,
   ) {
-    let destroyed = 0;
+    let destroyed = this.furniture.update(
+      dt,
+      time,
+      player,
+      eye,
+      direction,
+      sucking,
+    );
     for (const o of this.objects) {
       if (o.broken) continue;
       const dx = o.x - eye.x,

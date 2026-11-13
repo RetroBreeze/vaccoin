@@ -13,7 +13,7 @@ export interface UIState {
   liveStatus?: string;
   rankNotice?: string;
   leaderboardOpen?: boolean;
-  browseMode?: "top" | "around";
+  browseMode?: "top" | "top100" | "around";
   browseEntries?: Standing[];
   browseStatus?: string;
   browseLoading?: boolean;

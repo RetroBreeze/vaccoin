@@ -1148,3 +1148,32 @@ body:not(.casino-entered) #achievement-toast {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
 }
+
+/* Keep long rankings vertical and scrollable, including short landscape screens. */
+#rankings-menu .menu-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+#rankings-menu .rankings-header,
+#rankings-menu .menu-content > .menu-actions {
+  flex-shrink: 0;
+}
+#rankings-menu .rankings-header {
+  flex-wrap: wrap;
+}
+#rankings-menu .rankings-header .menu-actions {
+  flex-wrap: wrap;
+}
+#rankings-menu .rankings-scroll {
+  display: block;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+}
+#rankings-menu .rankings-scroll:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}

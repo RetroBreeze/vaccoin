@@ -183,7 +183,10 @@ export class MenuUI {
     const tabs = p.group("tabs", "menu-actions", header);
     p.button("top", this.get("leaderboard-top"), "TOP 10", tabs).setAttribute(
       "aria-pressed",
-      String(s.browseMode !== "around"),
+      String(!s.browseMode || s.browseMode === "top"),
+    );
+    p.button("top100", this.get("leaderboard-top100"), "TOP 100", tabs).setAttribute(
+      "aria-pressed", String(s.browseMode === "top100"),
     );
     p.button(
       "around",
@@ -191,7 +194,13 @@ export class MenuUI {
       "AROUND YOU",
       tabs,
     ).setAttribute("aria-pressed", String(s.browseMode === "around"));
-    const rows = p.node("ol", "rows", "", "standings");
+    const rows = p.node("ol", "rows", "", "standings rankings-scroll");
+    rows.tabIndex = 0;
+    rows.setAttribute("aria-label", "Leaderboard rankings");
+    if (rows.dataset.mode !== s.browseMode) {
+      rows.scrollTop = 0;
+      rows.dataset.mode = s.browseMode;
+    }
     updateStandings(
       rows,
       s.browseEntries ?? [],

@@ -60,14 +60,14 @@ async function boot() {
   retryButton.style.display = "none";
   button.after(retryButton);
   const leaderboardControls = Object.fromEntries(
-    ["open", "top", "around", "back"].map((action) => {
+    ["open", "top", "top100", "around", "back"].map((action) => {
       const control = button.cloneNode(false) as HTMLButtonElement;
       control.id = `leaderboard-${action}`;
       control.className = "leaderboard-control";
       button.after(control);
       return [action, control];
     }),
-  ) as Record<"open" | "top" | "around" | "back", HTMLButtonElement>;
+  ) as Record<"open" | "top" | "top100" | "around" | "back", HTMLButtonElement>;
   let leaderboardOpen = false, achievementsOpen = false;
   const achievementsButton = button.cloneNode(false) as HTMLButtonElement;
   achievementsButton.id = 'achievements-open';
@@ -290,7 +290,7 @@ async function boot() {
   }
   saveNameButton.addEventListener("click", () => void saveNameEdit());
   cancelNameButton.addEventListener("click", cancelNameEdit);
-  const browse = (mode: "top" | "around") =>
+  const browse = (mode: "top" | "top100" | "around") =>
     void leaderboard.browse(mode, !!profile.name);
   function closeLeaderboard() {
     leaderboardOpen = false;
@@ -304,6 +304,7 @@ async function boot() {
     requestAnimationFrame(() => leaderboardControls.top.focus());
   });
   leaderboardControls.top.addEventListener("click", () => browse("top"));
+  leaderboardControls.top100.addEventListener("click", () => browse("top100"));
   leaderboardControls.around.addEventListener("click", () => browse("around"));
   leaderboardControls.back.addEventListener("click", closeLeaderboard);
   retryButton.addEventListener("click", () => {

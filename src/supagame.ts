@@ -154,7 +154,7 @@ export class Leaderboard {
     this.live?.unsubscribe();
     this.live = undefined;
   }
-  browseMode: "top" | "around" = "top";
+  browseMode: "top" | "top100" | "around" = "top";
   browseEntries: Standing[] = [];
   browseStatus = "LEADERBOARD NOT LOADED";
   browseLoading = false;
@@ -227,7 +227,7 @@ export class Leaderboard {
     return operation;
   }
 
-  async browse(mode: "top" | "around", hasProfile = true) {
+  async browse(mode: "top" | "top100" | "around", hasProfile = true) {
     const version = ++this.browseVersion;
     this.browseMode = mode;
     this.browseEntries = [];
@@ -246,11 +246,12 @@ export class Leaderboard {
     try {
       const result = await deadline(
         (async () => {
-          if (mode === "top") {
+          if (mode === "top" || mode === "top100") {
+            const limit = mode === "top100" ? 100 : 10;
             const page = await this.game!.leaderboards.getTop("vaccoin", {
-              limit: 10,
+              limit,
             });
-            return page.entries.slice(0, 10).map((e) => ({
+            return page.entries.slice(0, limit).map((e) => ({
               rank: e.rank,
               name: e.displayName || "ANONYMOUS",
               score: e.score,

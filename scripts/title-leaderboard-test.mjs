@@ -13,6 +13,7 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1280, height: 720 },
   });
+  page.setDefaultTimeout(30000);
   const calls = await mockBackend(page, { appOrigin: origin });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -107,6 +108,28 @@ try {
   await enterCasino(page);
   await page.waitForFunction(() => window.vaccoinQA);
   await page.getByRole("button", { name: "LEADERBOARD", exact: true }).click();
+  await page.getByRole("button", { name: "TOP 100", exact: true }).click();
+  await page.waitForFunction(
+    () => window.vaccoinQA.snapshot().leaderboardBrowser.entries.length === 100,
+  );
+  assert.equal(await page.locator("#leaderboard-top100").getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator("#leaderboard-top").getAttribute("aria-pressed"), "false");
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 390, height: 844 }, { width: 756, height: 308 }]) {
+    await page.setViewportSize(viewport);
+    const rows = page.locator("#rankings-menu .standings");
+    await rows.evaluate(el => { el.scrollTop = 0; });
+    await rows.focus();
+    await page.keyboard.press("End");
+    await page.waitForFunction(() => {
+      const el = document.querySelector("#rankings-menu .standings");
+      return el.scrollTop > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+    });
+    assert.equal(await rows.locator("li").count(), 100);
+    assert.equal(await rows.locator("li").last().locator(".standing-rank").textContent(), "100");
+    assert.equal(await rows.evaluate(el => el.scrollWidth <= el.clientWidth), true);
+    await page.screenshot({ path: `test-results/top100-${viewport.width}.png` });
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "AROUND YOU", exact: true }).click();
   await page.waitForFunction(
     () => window.vaccoinQA.snapshot().leaderboardBrowser.entries.length === 11,
@@ -147,7 +170,7 @@ try {
   assert.equal(calls.submissions.length, 0);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: title leaderboard, public top ten, unranked state, nearby pagination, highlighted player, back and Escape (HTTP mocked)",
+    "PASS: title leaderboard, public top ten, scrollable top 100 at desktop/portrait/landscape sizes, unranked state, nearby pagination, highlighted player, back and Escape (HTTP mocked)",
   );
 } finally {
   await browser.close();

@@ -35,6 +35,7 @@ async function boot() {
   const canvas = document.querySelector<HTMLCanvasElement>("#world")!,
     uiCanvas = document.querySelector<HTMLCanvasElement>("#ui")!,
     button = document.querySelector<HTMLButtonElement>("#play")!,
+    demoButton = document.querySelector<HTMLButtonElement>("#play-demo")!,
     soundButton = document.querySelector<HTMLButtonElement>("#sound")!,
     status = document.querySelector<HTMLParagraphElement>("#status")!;
   const namePanel = document.querySelector<HTMLDivElement>("#player-name")!;
@@ -323,6 +324,7 @@ async function boot() {
   const atmosphere = new CasinoAtmosphere(view.scene);
   const spectacle = new CasinoSpectacle(view.scene);
   const intent = new PlayIntent();
+  let selectedDuration: 5 | 60 = 60;
   const keys = new Set<string>(),
     eye = new Vector3(),
     direction = new Vector3();
@@ -411,7 +413,7 @@ async function boot() {
     view.camera.getWorldDirection(direction);
   }
   function startRound() {
-    round.start(performance.now(), 3);
+    round.start(performance.now(), 3, selectedDuration);
     runOwner = workshop.owner;
     runSaveGeneration = workshop.generation;
     player.reset();
@@ -420,14 +422,14 @@ async function boot() {
     effects.reset();
     rate = 0;
     accumulator = 0;
-    countdown = 60;
+    countdown = round.durationSeconds;
     stopInput();
     view.camera.fov = 78;
     view.camera.updateProjectionMatrix();
     cameraToPlayer();
     vacuum.reset(performance.now() / 1000);
     audio.start();
-    status.textContent = "Round started. 60 seconds.";
+    status.textContent = `Round started. ${round.durationSeconds} seconds.`;
     error = "";
     last = performance.now();
   }
@@ -454,6 +456,7 @@ async function boot() {
   async function play(
     restart = false,
     source: "mouse" | "touch" | "gamepad" = mobile ? "touch" : "mouse",
+    durationSeconds: 5 | 60 = round.phase === "title" ? 60 : round.durationSeconds,
   ) {
     if (!entered() || leaderboardOpen || achievementsOpen || workshopUI.open || accounts.open || accounts.busy) return;
     if (editingName) {
@@ -475,6 +478,7 @@ async function boot() {
       void leaderboard.connect(profile.name);
     }
     nameInput.blur();
+    selectedDuration = durationSeconds;
     controlMode = source;
     if (source !== "mouse") {
       requesting = true;
@@ -510,6 +514,9 @@ async function boot() {
     }
   }
   button.addEventListener("click", () => void play());
+  demoButton.addEventListener("click", () => {
+    if (round.phase === "title") void play(false, mobile ? "touch" : "mouse", 5);
+  });
   document.addEventListener("pointerup", () => { if (entered()) void audio.unlock(); });
   document.addEventListener("keydown", () => { if (entered()) void audio.unlock(); });
   canvas.addEventListener("click", () => {
@@ -615,7 +622,7 @@ async function boot() {
     if (!round.tick(performance.now())) return;
     pauseControls();
     audio.finish();
-    const run = { id: round.id, score: round.score, durationMs: 60000 };
+    const run = { id: round.id, score: round.score, durationMs: round.durationSeconds * 1000 };
     void leaderboard.complete(run);
     void workshop.complete(run, runOwner, runSaveGeneration);
     status.textContent = `Round complete. ${round.score} points collected. Play again.`;
@@ -771,12 +778,12 @@ async function boot() {
     uiState.score = round.score;
     uiState.zone = casinoZone(player.position.x,player.position.y,player.position.z);
     uiState.pickup = coins.pickupTime > 0 ? coins.pickup : "";
-    uiState.remaining = round.phase === "playing" ? round.remaining(now) : 60;
+    uiState.remaining = round.phase === "playing" ? round.remaining(now) : round.durationSeconds;
     uiState.countdown = round.countdown(now);
     uiState.best = leaderboard.best;
     uiState.sucking = sucking;
     uiState.locked = controlsActive();
-    uiState.time = round.phase === "playing" ? 60 - round.remaining(now) : now / 1000;
+    uiState.time = round.phase === "playing" ? round.durationSeconds - round.remaining(now) : now / 1000;
     uiState.muted = audio.muted;
     uiState.entries = leaderboard.entries;
     uiState.error = error;

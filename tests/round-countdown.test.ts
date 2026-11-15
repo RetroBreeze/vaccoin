@@ -2,6 +2,34 @@ import { describe, expect, it } from "vitest";
 import { Round } from "../src/round";
 
 describe("round start countdown", () => {
+  it("gives demo rounds five playing seconds after the normal countdown", () => {
+    const round = new Round();
+    round.start(1000, 3, 5);
+    expect(round.countdown(1000)).toBe(3);
+    expect(round.remaining(1000)).toBe(5);
+    round.collect(10, 3999);
+    expect(round.score).toBe(0);
+    round.collect(10, 4000);
+    expect(round.score).toBe(10);
+    expect(round.remaining(5000)).toBe(4);
+    expect(round.tick(8999)).toBe(false);
+    expect(round.tick(9000)).toBe(true);
+    expect(round.phase).toBe("results");
+    round.start(10000, 3);
+    expect(round.remaining(10000)).toBe(60);
+  });
+
+  it("preserves demo time while paused", () => {
+    const round = new Round();
+    round.start(1000, 3, 5);
+    round.pause(5000);
+    expect(round.remaining(100000)).toBe(4);
+    expect(round.tick(100000)).toBe(false);
+    round.resume(100000);
+    expect(round.tick(103999)).toBe(false);
+    expect(round.tick(104000)).toBe(true);
+  });
+
   it("freezes a countdown while away and resumes its remaining preparation time", () => {
     const round = new Round();
     round.start(1000, 3);

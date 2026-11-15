@@ -269,6 +269,12 @@ body:not(.casino-entered) #sound {
 .casino-button.primary:hover {
   background: #ffe3a0;
 }
+#play-demo {
+  justify-self: center;
+  align-self: center;
+  padding: 8px 12px;
+  font-size: 11px;
+}
 .casino-button[aria-pressed="true"] {
   color: var(--gold);
   border-color: var(--gold);

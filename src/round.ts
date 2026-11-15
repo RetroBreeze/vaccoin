@@ -6,15 +6,17 @@ export class Round {
   startedAt = 0;
   id = "";
   destroyed = 0;
+  durationSeconds: 5 | 60 = 60;
   private hasCountdown = false;
   private pausedAt?: number;
   get paused() {
     return this.pausedAt !== undefined;
   }
-  start(now: number, countdownSeconds = 0) {
+  start(now: number, countdownSeconds = 0, durationSeconds: 5 | 60 = 60) {
     this.phase = "playing";
     this.score = 0;
     this.destroyed = 0;
+    this.durationSeconds = durationSeconds;
     this.hasCountdown = countdownSeconds > 0;
     this.pausedAt = undefined;
     this.startedAt = now + countdownSeconds * 1000;
@@ -22,8 +24,8 @@ export class Round {
   }
   remaining(now: number) {
     return Math.min(
-      60,
-      Math.max(0, 60 - ((this.pausedAt ?? now) - this.startedAt) / 1000),
+      this.durationSeconds,
+      Math.max(0, this.durationSeconds - ((this.pausedAt ?? now) - this.startedAt) / 1000),
     );
   }
   pause(now: number) {

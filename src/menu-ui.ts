@@ -134,6 +134,7 @@ export class MenuUI {
     p.button("shop", this.get("workshop-open"), "SHOP", actions);
     p.button("account", this.get("account-open"), "ACCOUNT", actions);
     p.sound(actions);
+    p.button("demo", this.get("play-demo"), "5 second demo", actions);
     const board = p.group("board", "casino-panel lobby-board", grid);
     p.node("h2", "board-heading", "Top 10", "", board);
     const rows = p.node("ol", "rows", "", "standings", board);

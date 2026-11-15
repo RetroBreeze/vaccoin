@@ -1,6 +1,17 @@
 import { TOTAL_POINTS } from "../src/coin-counts";
 import { expect, it } from "vitest";
 import { Leaderboard } from "../src/supagame";
+it("saves completed five-second demos and rejects incomplete rounds", async () => {
+  const b = new Leaderboard({ getItem: () => null, setItem: () => {} });
+  await b.complete({ id: "demo", score: 123, durationMs: 5000 });
+  expect(b.best).toBe(123);
+  for (const durationMs of [0, 4999, 5001, 59000]) {
+    await expect(
+      b.complete({ id: `incomplete-${durationMs}`, score: 150, durationMs }),
+    ).rejects.toThrow("Only valid completed rounds can be saved");
+  }
+});
+
 it("keeps best only, never fabricates online standings", async () => {
   const data = new Map<string, string>();
   const storage = {

@@ -196,11 +196,28 @@ try {
     window.testPad.axes = [0, 0, 0, 0];
   });
   await button(7, false);
-  await button(0, true);
+  for (const mapping of ["standard", ""]) {
+    await page.evaluate((mapping) => { window.testPad.mapping = mapping; }, mapping);
+    for (const index of [5, 0, 2]) {
+      await button(index, true);
+      await page.waitForFunction(() => window.vaccoinQA.snapshot().vacuumHeld);
+      await button(index, false);
+      await page.waitForFunction(() => !window.vaccoinQA.snapshot().vacuumHeld);
+    }
+    const beforeSticks = await snapshot(page);
+    await page.evaluate(() => { window.testPad.axes = [0.6, -0.7, -0.6, 0.4]; });
+    await page.waitForTimeout(200);
+    const afterSticks = await snapshot(page);
+    assert.notDeepEqual(afterSticks.position, beforeSticks.position);
+    assert.notEqual(afterSticks.yaw, beforeSticks.yaw);
+    assert.notEqual(afterSticks.pitch, beforeSticks.pitch);
+    await page.evaluate(() => { window.testPad.axes = [0, 0, 0, 0]; });
+  }
+  await button(1, true);
   await page.waitForFunction(
     () => window.vaccoinQA.snapshot().position[1] > 0.2,
   );
-  await button(0, false);
+  await button(1, false);
   await button(9, true);
   await page.waitForFunction(() => !window.vaccoinQA.snapshot().controlsActive);
   await button(9, false);
@@ -250,7 +267,7 @@ try {
   await page.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: standard gamepad start, movement, look, trigger, jump, pause/resume, disconnect safety and fullscreen toggle",
+    "PASS: standard and unmapped gamepad sticks, R1/A/X suction, start, trigger, jump, pause/resume, disconnect safety and fullscreen toggle",
   );
 } finally {
   await browser.close();

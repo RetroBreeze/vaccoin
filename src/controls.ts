@@ -17,16 +17,16 @@ export class GamepadControls {
   private index = -1;
   private previous = new Set<number>();
   poll(pads: readonly (Gamepad | null)[]): ControllerState {
-    const standard = pads.filter(
-      (pad): pad is Gamepad => !!pad?.connected && pad.mapping === "standard",
-    );
-    const used = standard.find(
+    // Android browsers can expose usable canonical axes/buttons with an empty
+    // mapping label (including handheld controllers). Do not discard them.
+    const connected = pads.filter((pad): pad is Gamepad => !!pad?.connected);
+    const used = connected.find(
       (pad) =>
         pad.buttons.some((b) => b.pressed) ||
         pad.axes.some((a) => Math.abs(a) > 0.3),
     );
     const pad =
-      used ?? standard.find((pad) => pad.index === this.index) ?? standard[0];
+      used ?? connected.find((pad) => pad.index === this.index) ?? connected[0];
     if (!pad || pad.index !== this.index) this.previous.clear();
     this.index = pad?.index ?? -1;
     const down = new Set(
@@ -41,9 +41,9 @@ export class GamepadControls {
       moveY: -axis(pad?.axes[1]),
       lookX: axis(pad?.axes[2]),
       lookY: axis(pad?.axes[3]),
-      vacuum: down.has(7),
-      jump: edge(0),
-      confirm: edge(0),
+      vacuum: down.has(5) || down.has(0) || down.has(2) || down.has(7),
+      jump: edge(1),
+      confirm: edge(0) || edge(2),
       menu: edge(9),
     };
     this.previous = down;

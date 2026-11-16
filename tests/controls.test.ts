@@ -20,16 +20,16 @@ function pad(
 it("filters stick drift and maps standard axes, trigger and jump edges", () => {
   const input = new GamepadControls();
   expect(input.poll([pad([0.1, -0.1, 0.1, -0.1])]).moveX).toBe(0);
-  const state = input.poll([pad([1, -1, -1, 1], [0, 7])]);
+  const state = input.poll([pad([1, -1, -1, 1], [1, 7])]);
   expect(state.moveX).toBe(1);
   expect(state.moveY).toBe(1);
   expect(state.lookX).toBe(-1);
   expect(state.lookY).toBe(1);
   expect(state.vacuum).toBe(true);
   expect(state.jump).toBe(true);
-  expect(input.poll([pad([], [0])]).jump).toBe(false);
+  expect(input.poll([pad([], [1])]).jump).toBe(false);
   input.poll([pad()]);
-  expect(input.poll([pad([], [0])]).jump).toBe(true);
+  expect(input.poll([pad([], [1])]).jump).toBe(true);
 });
 it("emits one menu action per press and clears state on disconnect", () => {
   const input = new GamepadControls();
@@ -43,9 +43,8 @@ it("emits one menu action per press and clears state on disconnect", () => {
   });
   expect(input.poll([pad([], [9])]).menu).toBe(true);
 });
-it("ignores unmapped devices and switches to a controller that is used", () => {
+it("switches to a controller that is used", () => {
   const input = new GamepadControls();
-  expect(input.poll([{ ...pad(), mapping: "" }]).connected).toBe(false);
   expect(input.poll([pad(), pad([1, 0, 0, 0], [], 1)]).moveX).toBe(1);
 });
 it("touch movement is bounded and independently tracks movement and aiming fingers", () => {
@@ -176,4 +175,34 @@ it("keeps a held movement finger active while double tapping to jump and aim", (
   input.move(4, 650, 90);
   expect(input.vacuum).toBe(true);
   expect(input.consumeLook()).toEqual([50, -10]);
+});
+
+it.each(["standard", ""] as const)(
+  "supports both sticks and suction buttons with mapping '%s'",
+  (mapping) => {
+    const input = new GamepadControls();
+    for (const button of [5, 0, 2, 7]) {
+      const device = { ...pad([1, -1, -1, 1], [button]), mapping };
+      expect(input.poll([null, device])).toMatchObject({
+        connected: true,
+        moveX: 1,
+        moveY: 1,
+        lookX: -1,
+        lookY: 1,
+        vacuum: true,
+        jump: false,
+      });
+      expect(input.poll([device]).vacuum).toBe(true);
+      expect(input.poll([{ ...pad(), mapping }]).vacuum).toBe(false);
+    }
+  },
+);
+it("allows A or X to confirm once per press on an unmapped Android pad", () => {
+  const input = new GamepadControls();
+  for (const button of [0, 2]) {
+    const device = { ...pad([], [button]), mapping: "" as const };
+    expect(input.poll([device]).confirm).toBe(true);
+    expect(input.poll([device]).confirm).toBe(false);
+    input.poll([]);
+  }
 });

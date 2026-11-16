@@ -6,14 +6,14 @@ A complete first-person browser arcade game built with TypeScript, Three.js, Vit
 
 ## Run locally
 
-Requires Node.js 22.12+ (tested with Node 26) and a browser with WebGL2. Play with keyboard and mouse, mobile touch controls, or a standard-mapped gamepad.
+Requires Node.js 22.12+ (tested with Node 26) and a browser with WebGL2. Play with keyboard and mouse, mobile touch controls, or a gamepad (including Android controllers without a standard mapping label).
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open the URL printed by Vite (normally **http://localhost:5173**). Choose your display name and click **PLAY**. Desktop play captures the mouse; mobile play uses touch controls and requests landscape fullscreen where supported. A gamepad can start with **Start** or **A/Cross** once a name is entered.
+Open the URL printed by Vite (normally **http://localhost:5173**). Choose your display name and click **PLAY**. Desktop play captures the mouse; mobile play uses touch controls and requests landscape fullscreen where supported. A gamepad can start with **Start**, **A** or **X** once a name is entered.
 
 ```sh
 npm run build       # strict TypeScript check and production bundle
@@ -35,15 +35,15 @@ archives, regenerate `package-lock.json`, and verify `npm ci`, `npm test`, and
 
 ## Controls
 
-| Action              | Keyboard / mouse     | Mobile touch                                      | Standard gamepad                                 |
+| Action              | Keyboard / mouse     | Mobile touch                                      | Gamepad                                 |
 | ------------------- | -------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | Move / strafe       | WASD                 | Swipe and hold on left side                       | Left stick                                       |
 | Look                | Mouse                | Drag on right side                                | Right stick                                      |
-| Vacuum              | Hold left mouse      | Hold right side                                   | Hold right trigger                               |
-| Jump                | Space                | Double tap either control area                    | A / Cross                                        |
-| Play / resume       | Click button / Enter | Tap button                                        | Start (A / Cross also starts from title/results) |
+| Vacuum              | Hold left mouse      | Hold right side                                   | Hold R1 / RB, A, X or right trigger                               |
+| Jump                | Space                | Double tap either control area                    | B / Circle                                       |
+| Play / resume       | Click button / Enter | Tap button                                        | Start (A / X also starts from title/results) |
 | Pause               | Escape               | II button                                         | Start                                            |
-| Restart immediately | R                    | Play Again after results                          | A / Cross after results                          |
+| Restart immediately | R                    | Play Again after results                          | A / X after results                          |
 | Fullscreen          | F / entry screen     | Automatic request on entry; Home Screen on iPhone | Enter before playing                             |
 | Toggle sound        | M / main-menu button | Sound button on main menu                         | Sound button on main menu                        |
 
